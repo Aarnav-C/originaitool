@@ -1,14 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Logo } from "@/components/Logo";
 import { TextInput } from "@/components/TextInput";
 import { ResultCard } from "@/components/ResultCard";
+import { AnalysisHistory } from "@/components/AnalysisHistory";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Shield, Zap, Brain, Eye } from "lucide-react";
+import { Shield, Zap, Brain, Eye, History, BarChart3, FileText, Sparkles } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+interface SentenceAnalysis {
+  text: string;
+  classification: "ai" | "human" | "uncertain";
+  confidence: number;
+  reason: string;
+}
 
 interface AnalysisResult {
   classification: "AI-Generated" | "Human-Written" | "Hybrid";
   probability: number;
+  sentenceAnalysis?: SentenceAnalysis[];
   evidenceSummary: {
     linguisticMarkers: string[];
     structuralPatterns: string[];
@@ -22,7 +32,23 @@ interface AnalysisResult {
     errorPattern: { score: number; indicators: string[] };
     toneFlow: { score: number; indicators: string[] };
   };
+  writingStyle?: {
+    formality: "formal" | "informal" | "mixed";
+    tone: string;
+    complexity: "simple" | "moderate" | "complex";
+    vocabulary: "basic" | "intermediate" | "advanced";
+  };
+  suggestions?: string[];
   confidenceExplanation: string;
+}
+
+interface HistoryItem {
+  id: string;
+  text: string;
+  classification: "AI-Generated" | "Human-Written" | "Hybrid";
+  probability: number;
+  timestamp: Date;
+  result: AnalysisResult;
 }
 
 const features = [
@@ -45,6 +71,26 @@ const features = [
     icon: Eye,
     title: "Transparent",
     description: "Clear, explainable results"
+  },
+  {
+    icon: FileText,
+    title: "Sentence Highlighting",
+    description: "See exactly which parts are AI"
+  },
+  {
+    icon: BarChart3,
+    title: "Detailed Stats",
+    description: "Comprehensive breakdown metrics"
+  },
+  {
+    icon: History,
+    title: "History Tracking",
+    description: "Review past analyses"
+  },
+  {
+    icon: Sparkles,
+    title: "Style Analysis",
+    description: "Writing style insights"
   }
 ];
 
@@ -52,6 +98,29 @@ const Index = () => {
   const [text, setText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [activeTab, setActiveTab] = useState("analyze");
+
+  // Load history from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("originai-history");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setHistory(parsed.map((item: any) => ({
+          ...item,
+          timestamp: new Date(item.timestamp)
+        })));
+      } catch (e) {
+        console.error("Failed to parse history:", e);
+      }
+    }
+  }, []);
+
+  // Save history to localStorage
+  useEffect(() => {
+    localStorage.setItem("originai-history", JSON.stringify(history));
+  }, [history]);
 
   const handleAnalyze = async () => {
     if (!text.trim()) {
@@ -79,6 +148,18 @@ const Index = () => {
       }
 
       setResult(data);
+      
+      // Add to history
+      const historyItem: HistoryItem = {
+        id: crypto.randomUUID(),
+        text,
+        classification: data.classification,
+        probability: data.probability,
+        timestamp: new Date(),
+        result: data
+      };
+      setHistory(prev => [historyItem, ...prev.slice(0, 19)]); // Keep last 20
+      
       toast.success("Analysis complete!");
     } catch (error) {
       console.error('Error:', error);
@@ -86,6 +167,23 @@ const Index = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSelectHistory = (item: HistoryItem) => {
+    setText(item.text);
+    setResult(item.result);
+    setActiveTab("analyze");
+    toast.info("Loaded analysis from history");
+  };
+
+  const handleDeleteHistory = (id: string) => {
+    setHistory(prev => prev.filter(item => item.id !== id));
+    toast.success("Removed from history");
+  };
+
+  const handleClearHistory = () => {
+    setHistory([]);
+    toast.success("History cleared");
   };
 
   return (
@@ -118,17 +216,17 @@ const Index = () => {
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Advanced linguistic forensics to determine if text was written by a human, 
-            AI, or a combination of both. Transparent, accurate, and instant.
+            AI, or a combination of both. <span className="text-primary">Hover over highlighted text</span> to see exactly which parts are AI.
           </p>
         </div>
 
         {/* Features */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12 max-w-4xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12 max-w-5xl mx-auto">
           {features.map((feature, index) => (
             <div
               key={feature.title}
               className="glass-card rounded-xl p-4 text-center animate-fade-in"
-              style={{ animationDelay: `${index * 100}ms` }}
+              style={{ animationDelay: `${index * 50}ms` }}
             >
               <feature.icon className="w-6 h-6 text-primary mx-auto mb-2" />
               <h3 className="text-sm font-medium text-foreground">{feature.title}</h3>
@@ -138,45 +236,74 @@ const Index = () => {
         </div>
 
         {/* Main Content */}
-        <div className="max-w-4xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-8">
-            {/* Input Section */}
-            <div className="glass-card rounded-2xl p-6">
-              <TextInput
-                text={text}
-                setText={setText}
-                onAnalyze={handleAnalyze}
-                isLoading={isLoading}
-              />
-            </div>
+        <div className="max-w-6xl mx-auto">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
+              <TabsTrigger value="analyze" className="gap-2">
+                <Brain className="w-4 h-4" />
+                Analyze
+              </TabsTrigger>
+              <TabsTrigger value="history" className="gap-2">
+                <History className="w-4 h-4" />
+                History ({history.length})
+              </TabsTrigger>
+            </TabsList>
 
-            {/* Results Section */}
-            <div className="space-y-6">
-              {result ? (
-                <ResultCard result={result} />
-              ) : (
-                <div className="glass-card rounded-2xl p-8 flex flex-col items-center justify-center min-h-[400px] text-center">
-                  <div className="w-20 h-20 rounded-2xl bg-secondary flex items-center justify-center mb-4">
-                    <Eye className="w-10 h-10 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    Ready to Analyze
-                  </h3>
-                  <p className="text-sm text-muted-foreground max-w-xs">
-                    Paste your text on the left and click "Analyze Text" to detect 
-                    whether it was written by a human or AI.
-                  </p>
+            <TabsContent value="analyze">
+              <div className="grid lg:grid-cols-2 gap-8">
+                {/* Input Section */}
+                <div className="glass-card rounded-2xl p-6">
+                  <TextInput
+                    text={text}
+                    setText={setText}
+                    onAnalyze={handleAnalyze}
+                    isLoading={isLoading}
+                  />
                 </div>
-              )}
-            </div>
-          </div>
+
+                {/* Results Section */}
+                <div className="space-y-6">
+                  {result ? (
+                    <ResultCard result={result} originalText={text} />
+                  ) : (
+                    <div className="glass-card rounded-2xl p-8 flex flex-col items-center justify-center min-h-[400px] text-center">
+                      <div className="w-20 h-20 rounded-2xl bg-secondary flex items-center justify-center mb-4">
+                        <Eye className="w-10 h-10 text-muted-foreground" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-foreground mb-2">
+                        Ready to Analyze
+                      </h3>
+                      <p className="text-sm text-muted-foreground max-w-xs">
+                        Paste your text on the left and click "Analyze Text" to detect 
+                        whether it was written by a human or AI. 
+                        <span className="block mt-2 text-primary">
+                          Hover over results to see which sentences are AI-generated!
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="history">
+              <div className="max-w-2xl mx-auto">
+                <AnalysisHistory
+                  history={history}
+                  onSelect={handleSelectHistory}
+                  onDelete={handleDeleteHistory}
+                  onClear={handleClearHistory}
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
 
       {/* Footer */}
       <footer className="relative z-10 border-t border-border/50 mt-16">
         <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
-          <p>OriginAI — Advanced AI Content Detection</p>
+          <p>OriginAI — Advanced AI Content Detection with Sentence-Level Analysis</p>
         </div>
       </footer>
     </div>
