@@ -1,9 +1,20 @@
-import { Bot, User, GitMerge, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
+import { Bot, User, GitMerge, AlertCircle, CheckCircle2, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { HighlightedText } from "./HighlightedText";
+import { WritingStyleCard } from "./WritingStyleCard";
+import { ExportActions } from "./ExportActions";
+
+interface SentenceAnalysis {
+  text: string;
+  classification: "ai" | "human" | "uncertain";
+  confidence: number;
+  reason: string;
+}
 
 interface AnalysisResult {
   classification: "AI-Generated" | "Human-Written" | "Hybrid";
   probability: number;
+  sentenceAnalysis?: SentenceAnalysis[];
   evidenceSummary: {
     linguisticMarkers: string[];
     structuralPatterns: string[];
@@ -17,14 +28,22 @@ interface AnalysisResult {
     errorPattern: { score: number; indicators: string[] };
     toneFlow: { score: number; indicators: string[] };
   };
+  writingStyle?: {
+    formality: "formal" | "informal" | "mixed";
+    tone: string;
+    complexity: "simple" | "moderate" | "complex";
+    vocabulary: "basic" | "intermediate" | "advanced";
+  };
+  suggestions?: string[];
   confidenceExplanation: string;
 }
 
 interface ResultCardProps {
   result: AnalysisResult;
+  originalText: string;
 }
 
-export const ResultCard = ({ result }: ResultCardProps) => {
+export const ResultCard = ({ result, originalText }: ResultCardProps) => {
   const getClassificationConfig = () => {
     switch (result.classification) {
       case "AI-Generated":
@@ -125,7 +144,34 @@ export const ResultCard = ({ result }: ResultCardProps) => {
             <span>AI</span>
           </div>
         </div>
+
+        {/* Export Actions */}
+        <div className="mt-4 pt-4 border-t border-border/50">
+          <ExportActions result={result} originalText={originalText} />
+        </div>
       </div>
+
+      {/* Sentence-by-Sentence Highlighting */}
+      {result.sentenceAnalysis && result.sentenceAnalysis.length > 0 && (
+        <div className="glass-card rounded-2xl p-6">
+          <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-primary" />
+            Sentence-by-Sentence Analysis
+          </h4>
+          <p className="text-sm text-muted-foreground mb-4">
+            Hover over each sentence to see why it was classified as AI or human-written.
+          </p>
+          <HighlightedText 
+            sentences={result.sentenceAnalysis} 
+            originalText={originalText}
+          />
+        </div>
+      )}
+
+      {/* Writing Style Analysis */}
+      {result.writingStyle && (
+        <WritingStyleCard style={result.writingStyle} />
+      )}
 
       {/* Detailed Breakdown */}
       <div className="glass-card rounded-2xl p-6">
@@ -207,13 +253,44 @@ export const ResultCard = ({ result }: ResultCardProps) => {
               <p className="text-sm text-foreground/80">{result.evidenceSummary.burstiessInsights}</p>
             </div>
           )}
+
+          {result.evidenceSummary.anomalies && result.evidenceSummary.anomalies.length > 0 && (
+            <div>
+              <h5 className="text-sm font-medium text-muted-foreground mb-2">Anomalies Detected</h5>
+              <div className="flex flex-wrap gap-2">
+                {result.evidenceSummary.anomalies.map((anomaly, i) => (
+                  <span key={i} className="text-xs px-3 py-1.5 rounded-full bg-destructive/10 text-destructive border border-destructive/20">
+                    {anomaly}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Suggestions */}
+      {result.suggestions && result.suggestions.length > 0 && (
+        <div className="glass-card rounded-2xl p-6">
+          <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Lightbulb className="w-5 h-5 text-warning" />
+            Suggestions
+          </h4>
+          <ul className="space-y-2">
+            {result.suggestions.map((suggestion, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                <span className="text-primary mt-1">•</span>
+                {suggestion}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Confidence Explanation */}
       <div className="glass-card rounded-2xl p-6">
         <h4 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-          <XCircle className="w-5 h-5 text-primary" />
+          <AlertCircle className="w-5 h-5 text-primary" />
           Confidence Explanation
         </h4>
         <p className="text-sm text-muted-foreground leading-relaxed">
