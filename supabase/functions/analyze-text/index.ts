@@ -127,6 +127,9 @@ serve(async (req) => {
 
     console.log('Analyzing text of length:', text.length);
 
+    // Limit text to prevent token overflow (roughly 15k chars max for good results)
+    const truncatedText = text.length > 15000 ? text.substring(0, 15000) + '...' : text;
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -137,10 +140,10 @@ serve(async (req) => {
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Analyze the following text and determine if it was written by a human, AI, or is a hybrid. Respond ONLY with valid JSON matching the specified format.\n\nText to analyze:\n"""${text}"""` }
+          { role: 'user', content: `Analyze the following text and determine if it was written by a human, AI, or is a hybrid. Respond ONLY with valid JSON matching the specified format. Keep sentenceAnalysis to MAX 20 sentences (sample evenly if text is longer). Keep all string values concise.\n\nText to analyze:\n"""${truncatedText}"""` }
         ],
         temperature: 0.3,
-        max_tokens: 2000,
+        max_tokens: 4000,
         response_format: { type: "json_object" }
       }),
     });
@@ -149,13 +152,32 @@ serve(async (req) => {
       const errorText = await response.text();
       console.error('OpenAI API error:', response.status, errorText);
       return new Response(
-        JSON.stringify({ error: 'Failed to analyze text' }),
+        JSON.stringify({ error: 'Failed to analyze text. Please try again.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const data = await response.json();
-    const analysisResult = JSON.parse(data.choices[0].message.content);
+    const content = data.choices[0]?.message?.content;
+    
+    if (!content) {
+      console.error('No content in OpenAI response');
+      return new Response(
+        JSON.stringify({ error: 'No analysis received. Please try again.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    let analysisResult;
+    try {
+      analysisResult = JSON.parse(content);
+    } catch (parseError) {
+      console.error('Failed to parse JSON response:', parseError, 'Content:', content.substring(0, 500));
+      return new Response(
+        JSON.stringify({ error: 'Analysis response was incomplete. Please try with shorter text.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     console.log('Analysis complete:', analysisResult.classification);
 
