@@ -56,6 +56,39 @@ const Index = () => {
     localStorage.setItem("originai-history", JSON.stringify(history));
   }, [history]);
 
+  const analyzeWithRetry = async (textToAnalyze: string, retries = 2): Promise<any> => {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+        
+        const { data, error } = await supabase.functions.invoke('analyze-text', {
+          body: { text: textToAnalyze }
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (error) {
+          console.error(`Analysis attempt ${attempt + 1} error:`, error);
+          if (attempt < retries) {
+            await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
+            continue;
+          }
+          throw error;
+        }
+        
+        return data;
+      } catch (err) {
+        console.error(`Attempt ${attempt + 1} failed:`, err);
+        if (attempt < retries) {
+          await new Promise(r => setTimeout(r, 1000));
+          continue;
+        }
+        throw err;
+      }
+    }
+  };
+
   const handleAnalyze = async () => {
     if (!text.trim()) {
       toast.error("Please enter some text to analyze");
@@ -66,15 +99,7 @@ const Index = () => {
     setResult(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('analyze-text', {
-        body: { text }
-      });
-
-      if (error) {
-        console.error('Analysis error:', error);
-        toast.error("Failed to analyze text. Please try again.");
-        return;
-      }
+      const data = await analyzeWithRetry(text);
 
       if (data.error) {
         toast.error(data.error);
@@ -97,7 +122,7 @@ const Index = () => {
       toast.success("Analysis complete!");
     } catch (error) {
       console.error('Error:', error);
-      toast.error("An unexpected error occurred. Please try again.");
+      toast.error("Analysis timed out. Please try with shorter text or try again.");
     } finally {
       setIsLoading(false);
     }
