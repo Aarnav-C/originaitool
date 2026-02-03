@@ -218,7 +218,7 @@ ${truncatedText}
           }
         ],
         temperature: 0.2,
-        max_tokens: 6000
+        max_completion_tokens: 6000
       }),
     });
 
