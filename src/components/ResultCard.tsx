@@ -1,42 +1,14 @@
-import { Bot, User, GitMerge, AlertCircle, CheckCircle2, Lightbulb } from "lucide-react";
+import { Bot, User, GitMerge, AlertCircle, CheckCircle2, Lightbulb, Cpu, Fingerprint } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HighlightedText } from "./HighlightedText";
 import { WritingStyleCard } from "./WritingStyleCard";
 import { ExportActions } from "./ExportActions";
-
-interface SentenceAnalysis {
-  text: string;
-  classification: "ai" | "human" | "uncertain";
-  confidence: number;
-  reason: string;
-}
-
-interface AnalysisResult {
-  classification: "AI-Generated" | "Human-Written" | "Hybrid";
-  probability: number;
-  sentenceAnalysis?: SentenceAnalysis[];
-  evidenceSummary: {
-    linguisticMarkers: string[];
-    structuralPatterns: string[];
-    burstiessInsights: string;
-    anomalies: string[];
-  };
-  detailedBreakdown: {
-    stylistic: { score: number; indicators: string[] };
-    semantic: { score: number; indicators: string[] };
-    statistical: { score: number; indicators: string[] };
-    errorPattern: { score: number; indicators: string[] };
-    toneFlow: { score: number; indicators: string[] };
-  };
-  writingStyle?: {
-    formality: "formal" | "informal" | "mixed";
-    tone: string;
-    complexity: "simple" | "moderate" | "complex";
-    vocabulary: "basic" | "intermediate" | "advanced";
-  };
-  suggestions?: string[];
-  confidenceExplanation: string;
-}
+import { ReadabilityCard } from "./ReadabilityCard";
+import { AdvancedMetricsCard } from "./AdvancedMetricsCard";
+import { HumanizationTipsCard } from "./HumanizationTipsCard";
+import { AIHumanMeter } from "./AIHumanMeter";
+import { ConfidenceBadge } from "./ConfidenceBadge";
+import type { AnalysisResult } from "@/types/analysis";
 
 interface ResultCardProps {
   result: AnalysisResult;
@@ -86,21 +58,22 @@ export const ResultCard = ({ result, originalText }: ResultCardProps) => {
   };
 
   const breakdownItems = [
-    { label: "Stylistic", data: result.detailedBreakdown.stylistic },
-    { label: "Semantic", data: result.detailedBreakdown.semantic },
-    { label: "Statistical", data: result.detailedBreakdown.statistical },
+    { label: "Stylistic Analysis", data: result.detailedBreakdown.stylistic },
+    { label: "Semantic Patterns", data: result.detailedBreakdown.semantic },
+    { label: "Statistical Signals", data: result.detailedBreakdown.statistical },
     { label: "Error Patterns", data: result.detailedBreakdown.errorPattern },
     { label: "Tone & Flow", data: result.detailedBreakdown.toneFlow },
+    ...(result.detailedBreakdown.neuralPatterns ? [{ label: "Neural Patterns", data: result.detailedBreakdown.neuralPatterns }] : []),
   ];
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Main Classification */}
+      {/* Main Classification Card */}
       <div className={cn(
         "glass-card rounded-2xl p-6 border",
         config.borderColor
       )}>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 mb-6">
           <div className={cn(
             "w-16 h-16 rounded-2xl flex items-center justify-center",
             config.bgColor
@@ -120,20 +93,27 @@ export const ResultCard = ({ result, originalText }: ResultCardProps) => {
               {result.probability}%
             </div>
             <div className="text-xs text-muted-foreground uppercase tracking-wide">
-              Confidence
+              AI Probability
             </div>
           </div>
         </div>
 
+        {/* Confidence Badge */}
+        {result.confidenceLevel && (
+          <div className="mb-6 flex justify-center">
+            <ConfidenceBadge level={result.confidenceLevel} probability={result.probability} />
+          </div>
+        )}
+
         {/* Progress Bar */}
-        <div className="mt-6">
-          <div className="h-2 bg-secondary rounded-full overflow-hidden">
+        <div className="mb-6">
+          <div className="h-3 bg-secondary rounded-full overflow-hidden">
             <div
               className={cn(
                 "h-full transition-all duration-1000 rounded-full",
-                result.classification === "Human-Written" ? "bg-success" :
-                result.classification === "AI-Generated" ? "bg-destructive" :
-                "bg-warning"
+                result.classification === "Human-Written" ? "bg-gradient-to-r from-success to-success/80" :
+                result.classification === "AI-Generated" ? "bg-gradient-to-r from-destructive to-destructive/80" :
+                "bg-gradient-to-r from-warning to-warning/80"
               )}
               style={{ width: `${result.probability}%` }}
             />
@@ -146,20 +126,29 @@ export const ResultCard = ({ result, originalText }: ResultCardProps) => {
         </div>
 
         {/* Export Actions */}
-        <div className="mt-4 pt-4 border-t border-border/50">
+        <div className="pt-4 border-t border-border/50">
           <ExportActions result={result} originalText={originalText} />
         </div>
       </div>
+
+      {/* AI/Human Distribution Meter */}
+      {(result.aiPercentage !== undefined || result.humanPercentage !== undefined) && (
+        <AIHumanMeter
+          aiPercentage={result.aiPercentage || result.probability}
+          humanPercentage={result.humanPercentage || (100 - result.probability)}
+          classification={result.classification}
+        />
+      )}
 
       {/* Sentence-by-Sentence Highlighting */}
       {result.sentenceAnalysis && result.sentenceAnalysis.length > 0 && (
         <div className="glass-card rounded-2xl p-6">
           <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-primary" />
-            Sentence-by-Sentence Analysis
+            <Fingerprint className="w-5 h-5 text-primary" />
+            Sentence-by-Sentence Forensics
           </h4>
           <p className="text-sm text-muted-foreground mb-4">
-            Hover over each sentence to see why it was classified as AI or human-written.
+            Hover over each sentence to see detection signals and reasoning.
           </p>
           <HighlightedText 
             sentences={result.sentenceAnalysis} 
@@ -168,27 +157,49 @@ export const ResultCard = ({ result, originalText }: ResultCardProps) => {
         </div>
       )}
 
+      {/* Advanced Metrics */}
+      {result.advancedMetrics && (
+        <AdvancedMetricsCard metrics={result.advancedMetrics} />
+      )}
+
+      {/* Readability Analysis */}
+      {result.readabilityMetrics && (
+        <ReadabilityCard metrics={result.readabilityMetrics} />
+      )}
+
       {/* Writing Style Analysis */}
       {result.writingStyle && (
         <WritingStyleCard style={result.writingStyle} />
       )}
 
+      {/* Humanization Tips */}
+      {result.humanizationTips && result.humanizationTips.length > 0 && (
+        <HumanizationTipsCard tips={result.humanizationTips} />
+      )}
+
       {/* Detailed Breakdown */}
       <div className="glass-card rounded-2xl p-6">
         <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-          <CheckCircle2 className="w-5 h-5 text-primary" />
-          Detailed Analysis
+          <Cpu className="w-5 h-5 text-primary" />
+          Detection Breakdown
         </h4>
         <div className="grid gap-4">
           {breakdownItems.map((item, index) => (
             <div
               key={item.label}
               className="animate-slide-in"
-              style={{ animationDelay: `${index * 100}ms` }}
+              style={{ animationDelay: `${index * 75}ms` }}
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-foreground">{item.label}</span>
-                <span className="text-sm text-muted-foreground">{item.data.score}%</span>
+                <div className="flex items-center gap-2">
+                  {item.data.weight && (
+                    <span className="text-xs text-muted-foreground">
+                      Weight: {(item.data.weight * 100).toFixed(0)}%
+                    </span>
+                  )}
+                  <span className="text-sm font-semibold text-foreground">{item.data.score}%</span>
+                </div>
               </div>
               <div className="h-2 bg-secondary rounded-full overflow-hidden">
                 <div
@@ -198,7 +209,7 @@ export const ResultCard = ({ result, originalText }: ResultCardProps) => {
               </div>
               {item.data.indicators.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {item.data.indicators.slice(0, 3).map((indicator, i) => (
+                  {item.data.indicators.slice(0, 4).map((indicator, i) => (
                     <span
                       key={i}
                       className="text-xs px-2 py-1 rounded-md bg-secondary text-secondary-foreground"
@@ -221,6 +232,34 @@ export const ResultCard = ({ result, originalText }: ResultCardProps) => {
         </h4>
         
         <div className="space-y-4">
+          {/* AI Signatures */}
+          {result.evidenceSummary.aiSignatures && result.evidenceSummary.aiSignatures.length > 0 && (
+            <div>
+              <h5 className="text-sm font-medium text-destructive mb-2">AI Signatures Detected</h5>
+              <div className="flex flex-wrap gap-2">
+                {result.evidenceSummary.aiSignatures.map((sig, i) => (
+                  <span key={i} className="text-xs px-3 py-1.5 rounded-full bg-destructive/10 text-destructive border border-destructive/20">
+                    {sig}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Human Signatures */}
+          {result.evidenceSummary.humanSignatures && result.evidenceSummary.humanSignatures.length > 0 && (
+            <div>
+              <h5 className="text-sm font-medium text-success mb-2">Human Signatures Detected</h5>
+              <div className="flex flex-wrap gap-2">
+                {result.evidenceSummary.humanSignatures.map((sig, i) => (
+                  <span key={i} className="text-xs px-3 py-1.5 rounded-full bg-success/10 text-success border border-success/20">
+                    {sig}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {result.evidenceSummary.linguisticMarkers.length > 0 && (
             <div>
               <h5 className="text-sm font-medium text-muted-foreground mb-2">Linguistic Markers</h5>
@@ -249,17 +288,17 @@ export const ResultCard = ({ result, originalText }: ResultCardProps) => {
 
           {result.evidenceSummary.burstiessInsights && (
             <div>
-              <h5 className="text-sm font-medium text-muted-foreground mb-2">Burstiness Insights</h5>
+              <h5 className="text-sm font-medium text-muted-foreground mb-2">Burstiness Analysis</h5>
               <p className="text-sm text-foreground/80">{result.evidenceSummary.burstiessInsights}</p>
             </div>
           )}
 
           {result.evidenceSummary.anomalies && result.evidenceSummary.anomalies.length > 0 && (
             <div>
-              <h5 className="text-sm font-medium text-muted-foreground mb-2">Anomalies Detected</h5>
+              <h5 className="text-sm font-medium text-muted-foreground mb-2">Anomalies</h5>
               <div className="flex flex-wrap gap-2">
                 {result.evidenceSummary.anomalies.map((anomaly, i) => (
-                  <span key={i} className="text-xs px-3 py-1.5 rounded-full bg-destructive/10 text-destructive border border-destructive/20">
+                  <span key={i} className="text-xs px-3 py-1.5 rounded-full bg-warning/10 text-warning border border-warning/20">
                     {anomaly}
                   </span>
                 ))}
@@ -274,7 +313,7 @@ export const ResultCard = ({ result, originalText }: ResultCardProps) => {
         <div className="glass-card rounded-2xl p-6">
           <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
             <Lightbulb className="w-5 h-5 text-warning" />
-            Suggestions
+            Recommendations
           </h4>
           <ul className="space-y-2">
             {result.suggestions.map((suggestion, i) => (
@@ -287,11 +326,24 @@ export const ResultCard = ({ result, originalText }: ResultCardProps) => {
         </div>
       )}
 
+      {/* Technical Notes */}
+      {result.technicalNotes && (
+        <div className="glass-card rounded-2xl p-6">
+          <h4 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+            <Cpu className="w-5 h-5 text-primary" />
+            Technical Notes
+          </h4>
+          <p className="text-sm text-muted-foreground leading-relaxed font-mono">
+            {result.technicalNotes}
+          </p>
+        </div>
+      )}
+
       {/* Confidence Explanation */}
       <div className="glass-card rounded-2xl p-6">
         <h4 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-          <AlertCircle className="w-5 h-5 text-primary" />
-          Confidence Explanation
+          <CheckCircle2 className="w-5 h-5 text-primary" />
+          Analysis Summary
         </h4>
         <p className="text-sm text-muted-foreground leading-relaxed">
           {result.confidenceExplanation}

@@ -1,14 +1,7 @@
 import { Bot, User, GitMerge, Trash2, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-
-interface HistoryItem {
-  id: string;
-  text: string;
-  classification: "AI-Generated" | "Human-Written" | "Hybrid";
-  probability: number;
-  timestamp: Date;
-}
+import type { HistoryItem } from "@/types/analysis";
 
 interface AnalysisHistoryProps {
   history: HistoryItem[];
