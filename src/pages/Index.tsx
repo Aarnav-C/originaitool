@@ -3,53 +3,28 @@ import { Logo } from "@/components/Logo";
 import { TextInput } from "@/components/TextInput";
 import { ResultCard } from "@/components/ResultCard";
 import { AnalysisHistory } from "@/components/AnalysisHistory";
+import { DocumentUpload } from "@/components/DocumentUpload";
+import { URLScanner } from "@/components/URLScanner";
+import { TextHumanizer } from "@/components/TextHumanizer";
+import { ComparisonMode } from "@/components/ComparisonMode";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Shield, Zap, Brain, Eye, History, BarChart3, FileText, Sparkles, Activity, Wand2 } from "lucide-react";
+import { 
+  Shield, Zap, Brain, Eye, History, BarChart3, FileText, Sparkles, Activity, Wand2,
+  Upload, Globe, GitCompare, Scan
+} from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AnalysisResult, HistoryItem } from "@/types/analysis";
 
 const features = [
-  {
-    icon: Brain,
-    title: "Deep Analysis",
-    description: "Multi-layer detection algorithms"
-  },
-  {
-    icon: Activity,
-    title: "8D Forensics",
-    description: "8 detection dimensions analyzed"
-  },
-  {
-    icon: Shield,
-    title: "High Accuracy",
-    description: "Precision content classification"
-  },
-  {
-    icon: Eye,
-    title: "Sentence-Level",
-    description: "Word-by-word AI detection"
-  },
-  {
-    icon: BarChart3,
-    title: "Advanced Metrics",
-    description: "Perplexity & burstiness scores"
-  },
-  {
-    icon: FileText,
-    title: "Readability",
-    description: "Flesch-Kincaid & Fog Index"
-  },
-  {
-    icon: Wand2,
-    title: "Humanization",
-    description: "Make AI text more natural"
-  },
-  {
-    icon: Sparkles,
-    title: "Style Analysis",
-    description: "Tone, voice & complexity"
-  }
+  { icon: Brain, title: "Deep Analysis", description: "Multi-layer detection" },
+  { icon: Activity, title: "8D Forensics", description: "8 detection dimensions" },
+  { icon: Shield, title: "High Accuracy", description: "Precision classification" },
+  { icon: Eye, title: "Sentence-Level", description: "Word-by-word detection" },
+  { icon: Upload, title: "Document Scan", description: "Upload PDF, DOCX, TXT" },
+  { icon: Globe, title: "URL Scanner", description: "Analyze any webpage" },
+  { icon: Wand2, title: "Humanizer", description: "Make AI text natural" },
+  { icon: GitCompare, title: "Compare Mode", description: "Side-by-side analysis" },
 ];
 
 const Index = () => {
@@ -58,6 +33,7 @@ const Index = () => {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [activeTab, setActiveTab] = useState("analyze");
+  const [inputMode, setInputMode] = useState<"text" | "upload" | "url">("text");
 
   // Load history from localStorage
   useEffect(() => {
@@ -116,7 +92,7 @@ const Index = () => {
         timestamp: new Date(),
         result: data
       };
-      setHistory(prev => [historyItem, ...prev.slice(0, 19)]); // Keep last 20
+      setHistory(prev => [historyItem, ...prev.slice(0, 19)]);
       
       toast.success("Analysis complete!");
     } catch (error) {
@@ -144,6 +120,12 @@ const Index = () => {
     toast.success("History cleared");
   };
 
+  const handleTextExtracted = (extractedText: string) => {
+    setText(extractedText);
+    setResult(null);
+    toast.success("Text ready for analysis!");
+  };
+
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Background Effects */}
@@ -166,62 +148,135 @@ const Index = () => {
 
       <main className="relative z-10 container mx-auto px-4 py-8 md:py-12">
         {/* Hero Section */}
-        <div className="text-center max-w-4xl mx-auto mb-12">
+        <div className="text-center max-w-4xl mx-auto mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
             <Zap className="w-4 h-4" />
-            Advanced AI Content Detection
+            Advanced AI Content Detection Suite
           </div>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight">
-            <span className="text-foreground">Detect </span>
-            <span className="text-gradient-primary">AI-Generated</span>
-            <span className="text-foreground"> Content</span>
+            <span className="text-foreground">The Ultimate </span>
+            <span className="text-gradient-primary">AI Detection</span>
+            <span className="text-foreground"> Platform</span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Advanced forensic analysis to determine if text was written by a human, 
-            AI, or a combination of both. Get sentence-level insights, readability metrics, 
-            and actionable recommendations.
+            Detect AI content, humanize text, scan documents & URLs, compare texts side-by-side. 
+            The most comprehensive AI detection suite available.
           </p>
         </div>
 
         {/* Features */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12 max-w-5xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-10 max-w-6xl mx-auto">
           {features.map((feature, index) => (
             <div
               key={feature.title}
-              className="glass-card rounded-xl p-4 text-center animate-fade-in"
-              style={{ animationDelay: `${index * 50}ms` }}
+              className="glass-card rounded-xl p-3 text-center animate-fade-in"
+              style={{ animationDelay: `${index * 30}ms` }}
             >
-              <feature.icon className="w-6 h-6 text-primary mx-auto mb-2" />
-              <h3 className="text-sm font-medium text-foreground">{feature.title}</h3>
-              <p className="text-xs text-muted-foreground mt-1">{feature.description}</p>
+              <feature.icon className="w-5 h-5 text-primary mx-auto mb-1.5" />
+              <h3 className="text-xs font-medium text-foreground">{feature.title}</h3>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{feature.description}</p>
             </div>
           ))}
         </div>
 
-        {/* Main Content */}
+        {/* Main Tabs */}
         <div className="max-w-6xl mx-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
-              <TabsTrigger value="analyze" className="gap-2">
-                <Brain className="w-4 h-4" />
-                Analyze
+            <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-5 mb-8 h-auto p-1">
+              <TabsTrigger value="analyze" className="gap-1.5 text-xs py-2.5">
+                <Scan className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Analyze</span>
               </TabsTrigger>
-              <TabsTrigger value="history" className="gap-2">
-                <History className="w-4 h-4" />
-                History ({history.length})
+              <TabsTrigger value="humanize" className="gap-1.5 text-xs py-2.5">
+                <Wand2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Humanize</span>
+              </TabsTrigger>
+              <TabsTrigger value="compare" className="gap-1.5 text-xs py-2.5">
+                <GitCompare className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Compare</span>
+              </TabsTrigger>
+              <TabsTrigger value="history" className="gap-1.5 text-xs py-2.5">
+                <History className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">History</span>
+                {history.length > 0 && (
+                  <span className="hidden sm:inline text-[10px] bg-primary/20 px-1.5 rounded-full">
+                    {history.length}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="about" className="gap-1.5 text-xs py-2.5">
+                <BarChart3 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">About</span>
               </TabsTrigger>
             </TabsList>
 
+            {/* Analyze Tab */}
             <TabsContent value="analyze">
               <div className="grid lg:grid-cols-2 gap-8">
                 {/* Input Section */}
-                <div className="glass-card rounded-2xl p-6">
-                  <TextInput
-                    text={text}
-                    setText={setText}
-                    onAnalyze={handleAnalyze}
-                    isLoading={isLoading}
-                  />
+                <div className="space-y-4">
+                  {/* Input Mode Selector */}
+                  <div className="glass-card rounded-2xl p-4">
+                    <div className="flex gap-2 mb-4">
+                      <button
+                        onClick={() => setInputMode("text")}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-medium transition-all ${
+                          inputMode === "text"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-secondary/50 text-muted-foreground hover:bg-secondary"
+                        }`}
+                      >
+                        <FileText className="w-4 h-4" />
+                        Text
+                      </button>
+                      <button
+                        onClick={() => setInputMode("upload")}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-medium transition-all ${
+                          inputMode === "upload"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-secondary/50 text-muted-foreground hover:bg-secondary"
+                        }`}
+                      >
+                        <Upload className="w-4 h-4" />
+                        Upload
+                      </button>
+                      <button
+                        onClick={() => setInputMode("url")}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-medium transition-all ${
+                          inputMode === "url"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-secondary/50 text-muted-foreground hover:bg-secondary"
+                        }`}
+                      >
+                        <Globe className="w-4 h-4" />
+                        URL
+                      </button>
+                    </div>
+
+                    {inputMode === "upload" && (
+                      <DocumentUpload 
+                        onTextExtracted={handleTextExtracted}
+                        isLoading={isLoading}
+                      />
+                    )}
+
+                    {inputMode === "url" && (
+                      <URLScanner 
+                        onTextExtracted={handleTextExtracted}
+                        isLoading={isLoading}
+                      />
+                    )}
+                  </div>
+
+                  {/* Main Text Input */}
+                  <div className="glass-card rounded-2xl p-6">
+                    <TextInput
+                      text={text}
+                      setText={setText}
+                      onAnalyze={handleAnalyze}
+                      isLoading={isLoading}
+                    />
+                  </div>
                 </div>
 
                 {/* Results Section */}
@@ -249,10 +304,9 @@ const Index = () => {
                         Ready to Analyze
                       </h3>
                       <p className="text-sm text-muted-foreground max-w-xs">
-                        Paste your text on the left and click "Analyze Text" to detect 
-                        whether it was written by a human or AI. 
+                        Paste text, upload a document, or scan a URL to detect AI-generated content.
                         <span className="block mt-2 text-primary">
-                          Hover over results to see which sentences are AI-generated!
+                          Try all our new features: Humanizer, Compare Mode & more!
                         </span>
                       </p>
                     </div>
@@ -261,6 +315,25 @@ const Index = () => {
               </div>
             </TabsContent>
 
+            {/* Humanize Tab */}
+            <TabsContent value="humanize">
+              <div className="max-w-3xl mx-auto">
+                <div className="glass-card rounded-2xl p-6">
+                  <TextHumanizer initialText={result?.classification === "AI-Generated" ? text : ""} />
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Compare Tab */}
+            <TabsContent value="compare">
+              <div className="max-w-4xl mx-auto">
+                <div className="glass-card rounded-2xl p-6">
+                  <ComparisonMode />
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* History Tab */}
             <TabsContent value="history">
               <div className="max-w-2xl mx-auto">
                 <AnalysisHistory
@@ -271,6 +344,71 @@ const Index = () => {
                 />
               </div>
             </TabsContent>
+
+            {/* About Tab */}
+            <TabsContent value="about">
+              <div className="max-w-3xl mx-auto">
+                <div className="glass-card rounded-2xl p-8 space-y-6">
+                  <div className="text-center">
+                    <h2 className="text-2xl font-bold text-foreground mb-2">About OriginAI</h2>
+                    <p className="text-muted-foreground">
+                      The most comprehensive AI content detection and analysis platform
+                    </p>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-xl bg-secondary/30">
+                      <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                        <Brain className="w-5 h-5 text-primary" />
+                        8D Forensic Analysis
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Our analysis examines 8 dimensions: stylistic patterns, semantic coherence, 
+                        statistical signals, error patterns, tone flow, neural patterns, 
+                        perplexity scores, and burstiness metrics.
+                      </p>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-secondary/30">
+                      <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                        <Wand2 className="w-5 h-5 text-primary" />
+                        AI Humanizer
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Transform AI-generated text into natural, human-sounding writing. 
+                        Choose from natural, casual, or professional styles.
+                      </p>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-secondary/30">
+                      <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                        <Upload className="w-5 h-5 text-primary" />
+                        Document Scanning
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Upload PDF, DOCX, or TXT files directly. Our system extracts 
+                        text content and runs full analysis on your documents.
+                      </p>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-secondary/30">
+                      <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                        <Globe className="w-5 h-5 text-primary" />
+                        URL Analysis
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Analyze any webpage by simply entering its URL. Perfect for 
+                        checking articles, blog posts, or online content.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-center text-sm text-muted-foreground">
+                    <p>Built with advanced AI technology for accurate content detection.</p>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
           </Tabs>
         </div>
       </main>
@@ -279,7 +417,7 @@ const Index = () => {
       <footer className="relative z-10 border-t border-border/50 mt-16">
         <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
           <p>
-            <span className="text-foreground font-semibold">OriginAI</span> — Advanced AI Content Detection
+            <span className="text-foreground font-semibold">OriginAI</span> — The Ultimate AI Content Detection Suite
           </p>
         </div>
       </footer>
