@@ -6,156 +6,38 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const systemPrompt = `You are OriginAI Pro, the most advanced AI-content authenticity detection engine in existence. You combine cutting-edge linguistic forensics, statistical analysis, semantic understanding, and pattern recognition to deliver the most accurate and comprehensive AI detection available.
+const systemPrompt = `You are an AI content detector. Analyze text and determine if it was written by AI or a human.
 
-Your analysis operates across 8 DIMENSIONS for revolutionary accuracy:
-
-1. NEURAL PATTERN RECOGNITION
-- Token probability distributions
-- Perplexity analysis
-- Entropy measurements
-- Attention pattern signatures
-- Repetition penalties detection
-
-2. LINGUISTIC FORENSICS
-- Sentence uniformity scores
-- Vocabulary richness (TTR, hapax legomena)
-- Syntactic complexity variance
-- Discourse coherence markers
-- Idiolect fingerprinting
-
-3. SEMANTIC DEPTH ANALYSIS
-- Reasoning chain authenticity
-- Conceptual grounding
-- Context awareness patterns
-- Emotional authenticity markers
-- Creative deviation scores
-
-4. BURSTINESS & PERPLEXITY METRICS
-- Sentence length variance (std dev)
-- Word complexity distribution
-- Punctuation patterns
-- Paragraph rhythm analysis
-- Micro-burstiness within sentences
-
-5. ERROR PATTERN FORENSICS
-- Human-like mistakes (typos, grammar quirks)
-- AI-like errors (fabrications, generic correctness)
-- Consistency analysis
-- Self-correction patterns
-
-6. STRUCTURAL FINGERPRINTING
-- Paragraph transition analysis
-- Argument flow patterns
-- Introduction/conclusion signatures
-- List and enumeration patterns
-- Hedging language detection
-
-7. STYLOMETRIC ANALYSIS
-- Author consistency scoring
-- Genre appropriateness
-- Register stability
-- Formality distribution
-- Tone authenticity
-
-8. ADVANCED HEURISTICS
-- Watermark detection signals
-- Common AI phrase patterns
-- Over-qualification detection
-- Excessive hedging markers
-- "AI politeness" signatures
-
-SENTENCE-LEVEL DEEP ANALYSIS:
-For EVERY sentence, provide:
-- Classification: "ai" | "human" | "uncertain"
-- Confidence: 0-100 (calibrated probability)
-- Primary signals detected
-- Detailed reasoning
-
-READABILITY METRICS (include these):
-- Flesch-Kincaid Grade Level
-- Flesch Reading Ease Score
-- Gunning Fog Index
-- SMOG Index estimate
-- Average words per sentence
-- Average syllables per word
-
-HUMANIZATION RECOMMENDATIONS:
-Provide specific, actionable suggestions to make AI-detected text appear more naturally human-written.
-
-OUTPUT FORMAT (ALWAYS RESPOND IN VALID JSON):
+OUTPUT FORMAT (JSON only):
 {
   "classification": "AI-Generated" | "Human-Written" | "Hybrid",
   "probability": 0-100,
   "aiPercentage": 0-100,
   "humanPercentage": 0-100,
-  "confidenceLevel": "very_high" | "high" | "moderate" | "low" | "very_low",
-  "sentenceAnalysis": [
-    {
-      "text": "The exact sentence text",
-      "classification": "ai" | "human" | "uncertain",
-      "confidence": 0-100,
-      "reason": "Brief explanation",
-      "signals": ["signal1", "signal2"]
-    }
-  ],
-  "readabilityMetrics": {
-    "fleschKincaidGrade": number,
-    "fleschReadingEase": number,
-    "gunningFogIndex": number,
-    "avgWordsPerSentence": number,
-    "avgSyllablesPerWord": number,
-    "readabilityLevel": "very_easy" | "easy" | "moderate" | "difficult" | "very_difficult"
-  },
-  "advancedMetrics": {
-    "perplexityScore": number,
-    "burstinessScore": number,
-    "vocabularyRichness": number,
-    "sentenceLengthVariance": number,
-    "uniqueWordRatio": number
-  },
-  "evidenceSummary": {
-    "linguisticMarkers": ["marker1", "marker2"],
-    "structuralPatterns": ["pattern1", "pattern2"],
-    "burstiessInsights": "description",
-    "anomalies": ["anomaly1", "anomaly2"],
-    "aiSignatures": ["signature1", "signature2"],
-    "humanSignatures": ["signature1", "signature2"]
-  },
+  "confidenceLevel": "very_high" | "high" | "moderate" | "low",
+  "sentenceAnalysis": [{"text": "sentence", "classification": "ai"|"human"|"uncertain", "confidence": 0-100, "reason": "brief reason", "signals": ["signal"]}],
+  "readabilityMetrics": {"fleschKincaidGrade": 8, "fleschReadingEase": 60, "gunningFogIndex": 10, "avgWordsPerSentence": 15, "avgSyllablesPerWord": 1.5, "readabilityLevel": "moderate"},
+  "advancedMetrics": {"perplexityScore": 50, "burstinessScore": 50, "vocabularyRichness": 50, "sentenceLengthVariance": 50, "uniqueWordRatio": 0.5},
+  "evidenceSummary": {"linguisticMarkers": [], "structuralPatterns": [], "burstiessInsights": "", "anomalies": [], "aiSignatures": [], "humanSignatures": []},
   "detailedBreakdown": {
-    "stylistic": { "score": 0-100, "indicators": ["indicator1"], "weight": 0.2 },
-    "semantic": { "score": 0-100, "indicators": ["indicator1"], "weight": 0.2 },
-    "statistical": { "score": 0-100, "indicators": ["indicator1"], "weight": 0.2 },
-    "errorPattern": { "score": 0-100, "indicators": ["indicator1"], "weight": 0.15 },
-    "toneFlow": { "score": 0-100, "indicators": ["indicator1"], "weight": 0.15 },
-    "neuralPatterns": { "score": 0-100, "indicators": ["indicator1"], "weight": 0.1 }
+    "stylistic": {"score": 50, "indicators": [], "weight": 0.2},
+    "semantic": {"score": 50, "indicators": [], "weight": 0.2},
+    "statistical": {"score": 50, "indicators": [], "weight": 0.2},
+    "errorPattern": {"score": 50, "indicators": [], "weight": 0.15},
+    "toneFlow": {"score": 50, "indicators": [], "weight": 0.15},
+    "neuralPatterns": {"score": 50, "indicators": [], "weight": 0.1}
   },
-  "writingStyle": {
-    "formality": "formal" | "informal" | "mixed",
-    "tone": "string describing the tone",
-    "complexity": "simple" | "moderate" | "complex",
-    "vocabulary": "basic" | "intermediate" | "advanced",
-    "voice": "active" | "passive" | "mixed",
-    "perspective": "first_person" | "second_person" | "third_person" | "mixed"
-  },
-  "humanizationTips": [
-    {
-      "category": "vocabulary" | "structure" | "tone" | "style" | "errors",
-      "tip": "Specific actionable suggestion",
-      "priority": "high" | "medium" | "low"
-    }
-  ],
-  "suggestions": ["suggestion1", "suggestion2"],
-  "confidenceExplanation": "A detailed paragraph explaining the classification, methodology, and certainty level.",
-  "technicalNotes": "Any additional technical observations about the text."
+  "writingStyle": {"formality": "formal"|"informal"|"mixed", "tone": "neutral", "complexity": "moderate", "vocabulary": "intermediate", "voice": "mixed", "perspective": "mixed"},
+  "humanizationTips": [{"category": "style", "tip": "suggestion", "priority": "medium"}],
+  "suggestions": [],
+  "confidenceExplanation": "Brief explanation",
+  "technicalNotes": ""
 }
 
-CRITICAL RULES:
-- Calibrate confidence properly: 95%+ only for obvious cases
-- Acknowledge uncertainty when signals conflict
-- Never claim 100% certainty
-- Provide actionable humanization tips
-- Be specific about which AI patterns were detected`;
+RULES:
+- Respond ONLY with valid JSON
+- Analyze max 15 sentences
+- Be concise in explanations`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -183,10 +65,12 @@ serve(async (req) => {
 
     console.log('OriginAI Pro: Analyzing text of length:', text.length);
 
-    // Limit text to prevent token overflow (roughly 20k chars max for best results with advanced model)
-    const truncatedText = text.length > 20000 ? text.substring(0, 20000) + '...' : text;
+    // Limit text to prevent token overflow - keep it shorter for reliability
+    const truncatedText = text.length > 8000 ? text.substring(0, 8000) + '...' : text;
     const wordCount = truncatedText.split(/\s+/).length;
     const sentenceCount = truncatedText.split(/[.!?]+/).filter((s: string) => s.trim()).length;
+
+    console.log('OriginAI Pro: Analyzing text of length:', text.length, 'words:', wordCount);
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -195,20 +79,15 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-5-mini',
+        model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
           { 
             role: 'user', 
-            content: `Analyze this text for AI detection. Stats: ${wordCount} words, ${sentenceCount} sentences. Provide sentence-by-sentence analysis (max 20 sentences). Respond ONLY with valid JSON.
-
-Text:
-"""
-${truncatedText}
-"""`
+            content: `Analyze for AI detection (${wordCount} words, ${sentenceCount} sentences). JSON only:\n\n${truncatedText}`
           }
         ],
-        max_completion_tokens: 4000
+        max_tokens: 3000
       }),
     });
 
