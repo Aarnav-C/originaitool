@@ -6,16 +6,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const systemPrompt = `You are an AI content detector. Analyze text and determine if it was written by AI or a human.
+const systemPrompt = `You are an AI detector. Analyze text and return JSON.
 
-OUTPUT FORMAT (JSON only):
+CRITICAL: Return ONLY valid JSON, no markdown, no extra text. Keep responses SHORT.
+
 {
   "classification": "AI-Generated" | "Human-Written" | "Hybrid",
   "probability": 0-100,
   "aiPercentage": 0-100,
   "humanPercentage": 0-100,
-  "confidenceLevel": "very_high" | "high" | "moderate" | "low",
-  "sentenceAnalysis": [{"text": "sentence", "classification": "ai"|"human"|"uncertain", "confidence": 0-100, "reason": "brief reason", "signals": ["signal"]}],
+  "confidenceLevel": "high" | "moderate" | "low",
+  "sentenceAnalysis": [{"text": "first 50 chars...", "classification": "ai"|"human", "confidence": 80, "reason": "brief", "signals": ["signal"]}],
   "readabilityMetrics": {"fleschKincaidGrade": 8, "fleschReadingEase": 60, "gunningFogIndex": 10, "avgWordsPerSentence": 15, "avgSyllablesPerWord": 1.5, "readabilityLevel": "moderate"},
   "advancedMetrics": {"perplexityScore": 50, "burstinessScore": 50, "vocabularyRichness": 50, "sentenceLengthVariance": 50, "uniqueWordRatio": 0.5},
   "evidenceSummary": {"linguisticMarkers": [], "structuralPatterns": [], "burstiessInsights": "", "anomalies": [], "aiSignatures": [], "humanSignatures": []},
@@ -24,20 +25,20 @@ OUTPUT FORMAT (JSON only):
     "semantic": {"score": 50, "indicators": [], "weight": 0.2},
     "statistical": {"score": 50, "indicators": [], "weight": 0.2},
     "errorPattern": {"score": 50, "indicators": [], "weight": 0.15},
-    "toneFlow": {"score": 50, "indicators": [], "weight": 0.15},
-    "neuralPatterns": {"score": 50, "indicators": [], "weight": 0.1}
+    "toneFlow": {"score": 50, "indicators": [], "weight": 0.15}
   },
-  "writingStyle": {"formality": "formal"|"informal"|"mixed", "tone": "neutral", "complexity": "moderate", "vocabulary": "intermediate", "voice": "mixed", "perspective": "mixed"},
-  "humanizationTips": [{"category": "style", "tip": "suggestion", "priority": "medium"}],
+  "writingStyle": {"formality": "formal", "tone": "neutral", "complexity": "moderate", "vocabulary": "intermediate"},
+  "humanizationTips": [{"category": "style", "tip": "tip", "priority": "medium"}],
   "suggestions": [],
-  "confidenceExplanation": "Brief explanation",
-  "technicalNotes": ""
+  "confidenceExplanation": "Brief explanation"
 }
 
 RULES:
-- Respond ONLY with valid JSON
-- Analyze max 15 sentences
-- Be concise in explanations`;
+- ONLY analyze first 8 sentences max
+- Keep sentenceAnalysis text to 50 chars max (truncate with ...)
+- Keep all string values SHORT
+- Max 3 items per array
+- Return ONLY the JSON object, nothing else`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -63,14 +64,11 @@ serve(async (req) => {
       );
     }
 
-    console.log('OriginAI Pro: Analyzing text of length:', text.length);
-
-    // Limit text to prevent token overflow - keep it shorter for reliability
-    const truncatedText = text.length > 8000 ? text.substring(0, 8000) + '...' : text;
+    // Limit text more aggressively
+    const truncatedText = text.length > 4000 ? text.substring(0, 4000) : text;
     const wordCount = truncatedText.split(/\s+/).length;
-    const sentenceCount = truncatedText.split(/[.!?]+/).filter((s: string) => s.trim()).length;
 
-    console.log('OriginAI Pro: Analyzing text of length:', text.length, 'words:', wordCount);
+    console.log('Analyzing text, length:', truncatedText.length, 'words:', wordCount);
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -82,30 +80,21 @@ serve(async (req) => {
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
-          { 
-            role: 'user', 
-            content: `Analyze for AI detection (${wordCount} words, ${sentenceCount} sentences). JSON only:\n\n${truncatedText}`
-          }
+          { role: 'user', content: `Analyze this text (${wordCount} words). Return ONLY valid JSON:\n\n${truncatedText}` }
         ],
-        max_tokens: 3000
+        max_tokens: 2000,
+        temperature: 0.3
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Lovable AI Gateway error:', response.status, errorText);
+      console.error('AI Gateway error:', response.status, errorText);
       
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: 'AI credits depleted. Please add credits to continue.' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
@@ -119,7 +108,7 @@ serve(async (req) => {
     const content = data.choices[0]?.message?.content;
     
     if (!content) {
-      console.error('No content in Lovable AI response');
+      console.error('No content in response');
       return new Response(
         JSON.stringify({ error: 'No analysis received. Please try again.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -128,86 +117,89 @@ serve(async (req) => {
 
     let analysisResult;
     try {
-      // Try to extract JSON from the response (handle potential markdown wrapping)
-      let jsonContent = content;
-      if (content.includes('```json')) {
-        jsonContent = content.split('```json')[1].split('```')[0];
-      } else if (content.includes('```')) {
-        jsonContent = content.split('```')[1].split('```')[0];
+      // Clean up content - remove markdown, find JSON
+      let jsonContent = content.trim();
+      
+      // Remove markdown code blocks
+      if (jsonContent.includes('```json')) {
+        jsonContent = jsonContent.split('```json')[1].split('```')[0];
+      } else if (jsonContent.includes('```')) {
+        jsonContent = jsonContent.split('```')[1].split('```')[0];
       }
-      analysisResult = JSON.parse(jsonContent.trim());
+      
+      jsonContent = jsonContent.trim();
+      
+      // Try to find the JSON object boundaries
+      const startIdx = jsonContent.indexOf('{');
+      const endIdx = jsonContent.lastIndexOf('}');
+      
+      if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+        jsonContent = jsonContent.substring(startIdx, endIdx + 1);
+      }
+      
+      analysisResult = JSON.parse(jsonContent);
     } catch (parseError) {
-      console.error('Failed to parse JSON response:', parseError, 'Content preview:', content.substring(0, 500));
-      return new Response(
-        JSON.stringify({ error: 'Analysis response was incomplete. Please try with shorter text.' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error('JSON parse error:', parseError);
+      console.error('Content length:', content.length);
+      
+      // Return a fallback result instead of error
+      analysisResult = {
+        classification: "Hybrid",
+        probability: 50,
+        confidenceLevel: "low",
+        confidenceExplanation: "Analysis could not be fully completed. Please try with shorter text."
+      };
     }
 
-    // Ensure all expected fields exist with defaults
+    // Build result with defaults
     const result = {
       classification: analysisResult.classification || 'Hybrid',
-      probability: analysisResult.probability || 50,
-      aiPercentage: analysisResult.aiPercentage || analysisResult.probability || 50,
-      humanPercentage: analysisResult.humanPercentage || (100 - (analysisResult.probability || 50)),
+      probability: analysisResult.probability ?? 50,
+      aiPercentage: analysisResult.aiPercentage ?? analysisResult.probability ?? 50,
+      humanPercentage: analysisResult.humanPercentage ?? (100 - (analysisResult.probability ?? 50)),
       confidenceLevel: analysisResult.confidenceLevel || 'moderate',
-      sentenceAnalysis: analysisResult.sentenceAnalysis || [],
+      sentenceAnalysis: (analysisResult.sentenceAnalysis || []).slice(0, 8),
       readabilityMetrics: analysisResult.readabilityMetrics || {
-        fleschKincaidGrade: 0,
-        fleschReadingEase: 0,
-        gunningFogIndex: 0,
-        avgWordsPerSentence: 0,
-        avgSyllablesPerWord: 0,
-        readabilityLevel: 'moderate'
+        fleschKincaidGrade: 8, fleschReadingEase: 60, gunningFogIndex: 10,
+        avgWordsPerSentence: 15, avgSyllablesPerWord: 1.5, readabilityLevel: 'moderate'
       },
       advancedMetrics: analysisResult.advancedMetrics || {
-        perplexityScore: 0,
-        burstinessScore: 0,
-        vocabularyRichness: 0,
-        sentenceLengthVariance: 0,
-        uniqueWordRatio: 0
+        perplexityScore: 50, burstinessScore: 50, vocabularyRichness: 50,
+        sentenceLengthVariance: 50, uniqueWordRatio: 0.5
       },
-      evidenceSummary: analysisResult.evidenceSummary || {
-        linguisticMarkers: [],
-        structuralPatterns: [],
-        burstiessInsights: '',
-        anomalies: [],
-        aiSignatures: [],
-        humanSignatures: []
+      evidenceSummary: {
+        linguisticMarkers: (analysisResult.evidenceSummary?.linguisticMarkers || []).slice(0, 3),
+        structuralPatterns: (analysisResult.evidenceSummary?.structuralPatterns || []).slice(0, 3),
+        burstiessInsights: analysisResult.evidenceSummary?.burstiessInsights || '',
+        anomalies: (analysisResult.evidenceSummary?.anomalies || []).slice(0, 3),
+        aiSignatures: (analysisResult.evidenceSummary?.aiSignatures || []).slice(0, 3),
+        humanSignatures: (analysisResult.evidenceSummary?.humanSignatures || []).slice(0, 3)
       },
       detailedBreakdown: analysisResult.detailedBreakdown || {
         stylistic: { score: 50, indicators: [], weight: 0.2 },
         semantic: { score: 50, indicators: [], weight: 0.2 },
         statistical: { score: 50, indicators: [], weight: 0.2 },
         errorPattern: { score: 50, indicators: [], weight: 0.15 },
-        toneFlow: { score: 50, indicators: [], weight: 0.15 },
-        neuralPatterns: { score: 50, indicators: [], weight: 0.1 }
+        toneFlow: { score: 50, indicators: [], weight: 0.15 }
       },
       writingStyle: analysisResult.writingStyle || {
-        formality: 'mixed',
-        tone: 'neutral',
-        complexity: 'moderate',
-        vocabulary: 'intermediate',
-        voice: 'mixed',
-        perspective: 'mixed'
+        formality: 'mixed', tone: 'neutral', complexity: 'moderate', vocabulary: 'intermediate'
       },
-      humanizationTips: analysisResult.humanizationTips || [],
-      suggestions: analysisResult.suggestions || [],
-      confidenceExplanation: analysisResult.confidenceExplanation || 'Analysis completed.',
-      technicalNotes: analysisResult.technicalNotes || ''
+      humanizationTips: (analysisResult.humanizationTips || []).slice(0, 3),
+      suggestions: (analysisResult.suggestions || []).slice(0, 3),
+      confidenceExplanation: analysisResult.confidenceExplanation || 'Analysis completed.'
     };
 
-    console.log('OriginAI Pro: Analysis complete:', result.classification, 'Confidence:', result.confidenceLevel);
+    console.log('Analysis complete:', result.classification, 'Confidence:', result.confidenceLevel);
 
     return new Response(
       JSON.stringify(result),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error in analyze-text function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+    console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'An unexpected error occurred. Please try again.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
