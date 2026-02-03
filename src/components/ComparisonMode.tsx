@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { GitCompare, Loader2, ArrowRight, Bot, User, GitMerge } from "lucide-react";
+import { GitCompare, Loader2, Bot, User, GitMerge, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -12,11 +12,24 @@ interface ComparisonResult {
   text2: AnalysisResult;
 }
 
+const samplePairs = {
+  aiVsHuman: {
+    text1: "Artificial intelligence has revolutionized numerous industries, offering unprecedented opportunities for automation and efficiency. The integration of machine learning algorithms has enabled organizations to process vast amounts of data.",
+    text2: "I've been playing with ChatGPT lately and honestly? It's pretty wild. Like yesterday I asked it to help me write an email and it did a decent job, though I had to tweak a few things."
+  }
+};
+
 export const ComparisonMode = () => {
   const [text1, setText1] = useState("");
   const [text2, setText2] = useState("");
   const [isComparing, setIsComparing] = useState(false);
   const [results, setResults] = useState<ComparisonResult | null>(null);
+
+  const loadSamplePair = () => {
+    setText1(samplePairs.aiVsHuman.text1);
+    setText2(samplePairs.aiVsHuman.text2);
+    setResults(null);
+  };
 
   const handleCompare = async () => {
     if (!text1.trim() || !text2.trim()) {
@@ -28,7 +41,6 @@ export const ComparisonMode = () => {
     setResults(null);
 
     try {
-      // Analyze both texts in parallel
       const [result1, result2] = await Promise.all([
         supabase.functions.invoke('analyze-text', { body: { text: text1 } }),
         supabase.functions.invoke('analyze-text', { body: { text: text2 } }),
@@ -89,7 +101,7 @@ export const ComparisonMode = () => {
             <Icon className={cn("w-6 h-6", colorClass)} />
           </div>
           <div>
-            <p className={cn("text-lg font-bold", colorClass)}>
+            <p className={cn("text-sm font-bold", colorClass)}>
               {result.classification}
             </p>
             <p className="text-2xl font-bold text-foreground">{result.probability}%</p>
@@ -111,9 +123,9 @@ export const ComparisonMode = () => {
               style={{ width: `${result.probability}%` }}
             />
           </div>
-          <div className="flex justify-between text-xs text-muted-foreground mt-2">
-            <span>Confidence: {result.confidenceLevel || "moderate"}</span>
-          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Confidence: {result.confidenceLevel || "moderate"}
+          </p>
         </div>
       </div>
     );
@@ -122,14 +134,20 @@ export const ComparisonMode = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-          <GitCompare className="w-5 h-5 text-primary-foreground" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+            <GitCompare className="w-5 h-5 text-primary-foreground" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">Compare Texts</h2>
+            <p className="text-sm text-muted-foreground">Analyze two texts side by side</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">Compare Texts</h2>
-          <p className="text-sm text-muted-foreground">Analyze two texts side by side</p>
-        </div>
+        <Button variant="outline" size="sm" onClick={loadSamplePair}>
+          <Sparkles className="w-3 h-3 mr-1" />
+          Load Sample
+        </Button>
       </div>
 
       {/* Input Areas */}
@@ -140,7 +158,7 @@ export const ComparisonMode = () => {
             value={text1}
             onChange={(e) => setText1(e.target.value)}
             placeholder="Paste first text here..."
-            className="min-h-[150px] bg-card/50 border-border/50"
+            className="min-h-[120px] bg-card/50 border-border/50"
           />
           <p className="text-xs text-muted-foreground">
             {text1.trim() ? text1.trim().split(/\s+/).length : 0} words
@@ -152,7 +170,7 @@ export const ComparisonMode = () => {
             value={text2}
             onChange={(e) => setText2(e.target.value)}
             placeholder="Paste second text here..."
-            className="min-h-[150px] bg-card/50 border-border/50"
+            className="min-h-[120px] bg-card/50 border-border/50"
           />
           <p className="text-xs text-muted-foreground">
             {text2.trim() ? text2.trim().split(/\s+/).length : 0} words
@@ -192,19 +210,19 @@ export const ComparisonMode = () => {
           
           {/* Difference Summary */}
           <div className="glass-card rounded-xl p-4">
-            <h4 className="text-sm font-medium text-foreground mb-3">Quick Summary</h4>
+            <h4 className="text-sm font-medium text-foreground mb-3 text-center">Summary</h4>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
                 <p className="text-2xl font-bold text-foreground">
                   {Math.abs(results.text1.probability - results.text2.probability)}%
                 </p>
-                <p className="text-xs text-muted-foreground">Probability Difference</p>
+                <p className="text-xs text-muted-foreground">Difference</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">
-                  {results.text1.classification === results.text2.classification ? "Same" : "Different"}
+                  {results.text1.classification === results.text2.classification ? "✓" : "✗"}
                 </p>
-                <p className="text-xs text-muted-foreground">Classification Match</p>
+                <p className="text-xs text-muted-foreground">Same Type</p>
               </div>
               <div>
                 <p className={cn(
