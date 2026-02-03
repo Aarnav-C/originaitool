@@ -12,42 +12,42 @@ import type { AnalysisResult, HistoryItem } from "@/types/analysis";
 const features = [
   {
     icon: Brain,
-    title: "GPT-5 Powered",
-    description: "Most advanced AI detection engine"
+    title: "Deep Analysis",
+    description: "Multi-layer detection algorithms"
   },
   {
     icon: Activity,
-    title: "8D Analysis",
+    title: "8D Forensics",
     description: "8 detection dimensions analyzed"
   },
   {
     icon: Shield,
-    title: "99% Accuracy",
-    description: "Revolutionary detection precision"
+    title: "High Accuracy",
+    description: "Precision content classification"
   },
   {
     icon: Eye,
-    title: "Sentence Forensics",
+    title: "Sentence-Level",
     description: "Word-by-word AI detection"
   },
   {
     icon: BarChart3,
     title: "Advanced Metrics",
-    description: "Perplexity & burstiness analysis"
+    description: "Perplexity & burstiness scores"
   },
   {
     icon: FileText,
-    title: "Readability Score",
+    title: "Readability",
     description: "Flesch-Kincaid & Fog Index"
   },
   {
     icon: Wand2,
-    title: "Humanization Tips",
+    title: "Humanization",
     description: "Make AI text more natural"
   },
   {
     icon: Sparkles,
-    title: "Style Insights",
+    title: "Style Analysis",
     description: "Tone, voice & complexity"
   }
 ];
@@ -167,22 +167,19 @@ const Index = () => {
       <main className="relative z-10 container mx-auto px-4 py-8 md:py-12">
         {/* Hero Section */}
         <div className="text-center max-w-4xl mx-auto mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6 animate-pulse-glow">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
             <Zap className="w-4 h-4" />
-            Powered by GPT-5 — Most Advanced AI Detection Available
+            Advanced AI Content Detection
           </div>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight">
-            <span className="text-foreground">Revolutionary </span>
-            <span className="text-gradient-primary">AI Detection</span>
-            <br />
-            <span className="text-foreground">Engine</span>
+            <span className="text-foreground">Detect </span>
+            <span className="text-gradient-primary">AI-Generated</span>
+            <span className="text-foreground"> Content</span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            The most advanced AI content detection with 8-dimensional forensic analysis,
-            sentence-level classification, readability metrics, and humanization recommendations.
-            <span className="block mt-2 text-primary font-medium">
-              Hover over highlighted text to see exactly which parts are AI-generated.
-            </span>
+            Advanced forensic analysis to determine if text was written by a human, 
+            AI, or a combination of both. Get sentence-level insights, readability metrics, 
+            and actionable recommendations.
           </p>
         </div>
 
@@ -269,11 +266,8 @@ const Index = () => {
       {/* Footer */}
       <footer className="relative z-10 border-t border-border/50 mt-16">
         <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
-          <p className="mb-2">
-            <span className="text-foreground font-semibold">OriginAI Pro</span> — Revolutionary AI Content Detection Engine
-          </p>
-          <p className="text-xs">
-            8-Dimensional Analysis • GPT-5 Powered • Sentence-Level Forensics • Humanization Tips
+          <p>
+            <span className="text-foreground font-semibold">OriginAI</span> — Advanced AI Content Detection
           </p>
         </div>
       </footer>
