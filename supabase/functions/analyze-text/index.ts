@@ -6,17 +6,27 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const systemPrompt = `You are an AI detector. Analyze text and return JSON.
+const systemPrompt = `You are an expert AI content detector. Analyze text and return JSON.
 
-CRITICAL: Return ONLY valid JSON, no markdown, no extra text. Keep responses SHORT.
+CRITICAL RULES:
+1. Return ONLY valid JSON, no markdown, no extra text
+2. PROBABILITY MUST BE NUANCED - use the FULL 0-100 range based on evidence:
+   - 0-15: Clearly human (slang, typos, personal stories, emotions)
+   - 16-35: Mostly human with some formal elements
+   - 36-50: Mixed/uncertain, could be either
+   - 51-65: Leaning AI but has human touches
+   - 66-85: Mostly AI with some variation
+   - 86-100: Clearly AI (perfect grammar, generic phrasing, no personality)
+3. NEVER default to 98% or 2% - analyze EACH text uniquely
+4. Consider: typos, slang, contractions, sentence variety, personal voice, topic complexity
 
 {
   "classification": "AI-Generated" | "Human-Written" | "Hybrid",
-  "probability": 0-100,
-  "aiPercentage": 0-100,
-  "humanPercentage": 0-100,
+  "probability": 0-100 (BE SPECIFIC - use exact numbers like 23, 47, 61, 73, 82 based on evidence),
+  "aiPercentage": 0-100 (same as probability),
+  "humanPercentage": 0-100 (100 minus aiPercentage),
   "confidenceLevel": "high" | "moderate" | "low",
-  "sentenceAnalysis": [{"text": "first 50 chars...", "classification": "ai"|"human", "confidence": 80, "reason": "brief", "signals": ["signal"]}],
+  "sentenceAnalysis": [{"text": "first 50 chars...", "classification": "ai"|"human", "confidence": 0-100, "reason": "brief", "signals": ["signal"]}],
   "readabilityMetrics": {"fleschKincaidGrade": 8, "fleschReadingEase": 60, "gunningFogIndex": 10, "avgWordsPerSentence": 15, "avgSyllablesPerWord": 1.5, "readabilityLevel": "moderate"},
   "advancedMetrics": {"perplexityScore": 50, "burstinessScore": 50, "vocabularyRichness": 50, "sentenceLengthVariance": 50, "uniqueWordRatio": 0.5},
   "evidenceSummary": {"linguisticMarkers": [], "structuralPatterns": [], "burstiessInsights": "", "anomalies": [], "aiSignatures": [], "humanSignatures": []},
@@ -30,15 +40,21 @@ CRITICAL: Return ONLY valid JSON, no markdown, no extra text. Keep responses SHO
   "writingStyle": {"formality": "formal", "tone": "neutral", "complexity": "moderate", "vocabulary": "intermediate"},
   "humanizationTips": [{"category": "style", "tip": "tip", "priority": "medium"}],
   "suggestions": [],
-  "confidenceExplanation": "Brief explanation"
+  "confidenceExplanation": "Brief explanation of WHY this specific percentage"
 }
 
+EXAMPLES of nuanced scoring:
+- Business email with minor typos: 35-45%
+- Blog post with personality but good grammar: 40-55%
+- Academic paper, well-structured: 70-85%
+- Casual text with lots of slang: 5-20%
+- News article, professional: 55-70%
+
 RULES:
-- ONLY analyze first 8 sentences max
-- Keep sentenceAnalysis text to 50 chars max (truncate with ...)
-- Keep all string values SHORT
+- Analyze first 8 sentences max
+- Keep sentenceAnalysis text to 50 chars max
 - Max 3 items per array
-- Return ONLY the JSON object, nothing else`;
+- Return ONLY the JSON object`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
