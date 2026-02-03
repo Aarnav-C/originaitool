@@ -1,6 +1,6 @@
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Scan, Loader2, FileText, Type, Hash, Clock, Trash2 } from "lucide-react";
+import { Scan, Loader2, FileText, Type, Hash, Clock, Trash2, Sparkles } from "lucide-react";
 
 interface TextInputProps {
   text: string;
@@ -9,12 +9,17 @@ interface TextInputProps {
   isLoading: boolean;
 }
 
+const sampleTexts = {
+  ai: "Artificial intelligence has revolutionized numerous industries, offering unprecedented opportunities for automation and efficiency. The integration of machine learning algorithms has enabled organizations to process vast amounts of data with remarkable accuracy. Furthermore, natural language processing has transformed how we interact with technology, making interfaces more intuitive and accessible.",
+  human: "I was walking my dog yesterday and bumped into my old friend Sarah. We hadn't seen each other in like, 5 years? It was kinda awkward at first but then we got coffee and talked for hours lol. Can't believe how much has changed!",
+  hybrid: "Climate change is a pressing issue that demands our attention. I've been thinking a lot about this lately, especially after that crazy storm last month. Scientists have identified rising global temperatures as a primary concern, but honestly, seeing my neighbor's fence blow away made it feel way more real."
+};
+
 export const TextInput = ({ text, setText, onAnalyze, isLoading }: TextInputProps) => {
   const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
   const charCount = text.length;
   const sentenceCount = text.split(/[.!?]+/).filter(s => s.trim()).length;
-  const avgWordLength = wordCount > 0 ? (charCount / wordCount).toFixed(1) : "0";
-  const readingTime = Math.max(1, Math.ceil(wordCount / 200)); // ~200 words per minute
+  const readingTime = Math.max(1, Math.ceil(wordCount / 200));
 
   const handleClear = () => {
     setText("");
@@ -59,6 +64,37 @@ export const TextInput = ({ text, setText, onAnalyze, isLoading }: TextInputProp
         </div>
       </div>
 
+      {/* Sample Text Buttons */}
+      <div className="flex gap-2 flex-wrap">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setText(sampleTexts.ai)}
+          className="text-xs"
+        >
+          <Sparkles className="w-3 h-3 mr-1" />
+          AI Sample
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setText(sampleTexts.human)}
+          className="text-xs"
+        >
+          <Sparkles className="w-3 h-3 mr-1" />
+          Human Sample
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setText(sampleTexts.hybrid)}
+          className="text-xs"
+        >
+          <Sparkles className="w-3 h-3 mr-1" />
+          Hybrid Sample
+        </Button>
+      </div>
+
       {/* Text Stats */}
       <div className="grid grid-cols-4 gap-2">
         <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary/50 text-xs">
@@ -89,24 +125,16 @@ export const TextInput = ({ text, setText, onAnalyze, isLoading }: TextInputProp
           onChange={(e) => setText(e.target.value)}
           placeholder="Paste your text here to analyze whether it was written by a human or AI...
 
-For best results:
-• Use at least 50 words
-• Include complete sentences
-• Avoid heavily formatted text"
-          className="min-h-[280px] bg-card/50 border-border/50 resize-none text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:ring-primary/20 transition-all duration-300"
+Try the sample buttons above to see how the detector works!"
+          className="min-h-[200px] bg-card/50 border-border/50 resize-none text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:ring-primary/20 transition-all duration-300"
         />
         {isLoading && (
           <div className="absolute inset-0 bg-background/50 backdrop-blur-sm rounded-lg flex items-center justify-center">
             <div className="flex flex-col items-center gap-3">
               <div className="relative">
                 <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                <div className="absolute inset-0 animate-pulse-glow rounded-full" />
               </div>
               <span className="text-sm text-muted-foreground">Analyzing content...</span>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                Running 8-dimensional forensic analysis
-              </div>
             </div>
           </div>
         )}
