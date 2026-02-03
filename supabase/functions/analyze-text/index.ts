@@ -195,29 +195,20 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-5',
+        model: 'openai/gpt-5-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { 
             role: 'user', 
-            content: `Perform the most comprehensive AI detection analysis possible on the following text. 
+            content: `Analyze this text for AI detection. Stats: ${wordCount} words, ${sentenceCount} sentences. Provide sentence-by-sentence analysis (max 20 sentences). Respond ONLY with valid JSON.
 
-Text Statistics:
-- Word count: ${wordCount}
-- Sentence count: ${sentenceCount}
-- Character count: ${truncatedText.length}
-
-Analyze every dimension and provide detailed sentence-by-sentence analysis (max 25 sentences, sample evenly if longer). Include all readability metrics, advanced metrics, and specific humanization tips.
-
-Respond ONLY with valid JSON matching the specified format.
-
-Text to analyze:
+Text:
 """
 ${truncatedText}
 """`
           }
         ],
-        max_completion_tokens: 6000
+        max_completion_tokens: 4000
       }),
     });
 
