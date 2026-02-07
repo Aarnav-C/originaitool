@@ -8,86 +8,95 @@ const corsHeaders = {
 
 const systemPrompt = `You are an AI content detector. Return ONLY valid JSON.
 
-## PROBABILITY CALCULATION - CRITICAL
+## EXACT PROBABILITY CALCULATION (0-100 INTEGER)
 
-You MUST calculate an EXACT probability from 0 to 100 using this precise formula:
+You MUST output a PRECISE integer from this complete set:
+[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100]
 
-### Step 1: Count Human Signals (H)
-- Typos/misspellings: +3 each
-- Slang (lol, ngl, fr, idk, gonna, wanna, kinda): +4 each
-- Contractions (don't, can't, won't, I'm, we're): +2 each
-- Incomplete/fragment sentences: +3 each
-- Strong emotion words (love, hate, amazing, awful): +2 each
-- Personal pronouns (I, my, me, we, our): +1 each
-- Specific names/places/dates: +2 each
-- Rhetorical questions: +3 each
-- Casual punctuation (!!, ..., ??, lmao): +3 each
-- Humor/sarcasm/irony: +4 each
-- Stream of consciousness: +3 each
-- Self-corrections ("I mean", "wait no"): +4 each
+### SIGNAL POINT VALUES
 
-### Step 2: Count AI Signals (A)
-- Formal transitions (Furthermore, Additionally, Moreover, In conclusion, Consequently): +4 each
-- Perfect grammar throughout: +5
-- No contractions at all: +3
-- Passive voice sentences: +2 each
-- Buzzwords (innovative, comprehensive, leverage, optimize, synergy, unprecedented): +3 each
-- Generic statements without specifics: +2 each
-- Balanced parallel sentence structures: +3 each
-- Academic/formal tone: +4
-- Lists with consistent formatting: +2 each
-- Hedging phrases (It is important to note, One might argue): +3 each
+HUMAN SIGNALS (subtract from 50):
+- Each typo/misspelling: -3 points
+- Each slang word (lol, ngl, fr, idk, gonna, wanna, kinda, tbh, omg, wtf, lmao, bruh): -4 points
+- Each contraction (don't, can't, won't, I'm, we're, they're, it's, that's): -2 points
+- Each incomplete/fragment sentence: -3 points
+- Each strong emotion word (love, hate, amazing, awful, terrible, awesome): -2 points
+- Each personal pronoun (I, my, me, we, our, you, your): -1 point
+- Each specific name/place/date: -2 points
+- Each rhetorical question: -3 points
+- Each casual punctuation (!!, ..., ??, —): -3 points
+- Humor/sarcasm/irony detected: -4 points
+- Stream of consciousness style: -3 points
+- Self-corrections ("I mean", "wait no", "actually"): -4 points
+- Informal interjections (oh, ah, um, uh, hmm, well): -2 points
 
-### Step 3: Calculate Raw Probability
-raw_probability = 50 + (A * 3) - (H * 3)
+AI SIGNALS (add to 50):
+- Each formal transition (Furthermore, Additionally, Moreover, In conclusion, Consequently, Therefore, Thus, Hence): +4 points
+- Perfect grammar throughout (no errors): +5 points
+- Zero contractions in 50+ word text: +3 points
+- Each passive voice sentence: +2 points
+- Each buzzword (innovative, comprehensive, leverage, optimize, synergy, unprecedented, robust, streamline, facilitate, implement): +3 points
+- Each generic statement without specifics: +2 points
+- Balanced parallel sentence structures: +3 points
+- Academic/formal tone overall: +4 points
+- Each consistently formatted list item: +2 points
+- Each hedging phrase (It is important to note, One might argue, It should be noted): +3 points
+- Repetitive sentence length pattern: +2 points
 
-### Step 4: Apply Bounds and Precision
-- Clamp to 0-100 range
-- Add micro-adjustment based on text length: +/- (word_count % 7) - 3
-- The final number should be PRECISE, not rounded
+### FORMULA
+raw = 50 + (total_AI_points) - (total_Human_points)
+final = clamp(raw, 0, 100) + (word_count % 7) - 3
 
-### EXAMPLE CALCULATIONS:
+### REFERENCE EXAMPLES (study these patterns):
 
-Text: "omg i cant believe this lol!! sarah told me yesterday and im like wtf??"
-H = slang(lol,wtf)=8 + typo(cant,im)=6 + punctuation(!!)=3 + emotion=2 + pronouns(i,me,im)=3 = 22
-A = 0
-raw = 50 + 0 - 66 = -16 → clamped to 0, adjusted = 3
-RESULT: 3%
+"omg cant believe this lol!! sarah said wtf yesterday" → 2%
+(slang: lol,wtf=8, typo: cant=3, punct: !!=3, pronoun=1, name=2 → H=17, A=0 → 50+0-51=-1→2)
 
-Text: "I went to the store yesterday. Got some milk and bread. Pretty normal day tbh."
-H = contraction(tbh)=2 + pronouns(I)=2 + specific(yesterday,store)=4 + fragment=3 = 11
-A = 0
-raw = 50 + 0 - 33 = 17, adjusted = 19
-RESULT: 19%
+"yeah so i was thinking maybe we could try that thing idk" → 8%
+(slang: idk=4, informal: yeah,so=4, pronouns: i,we=2, fragment=3 → H=13, A=0 → 50-39=11→8)
 
-Text: "The implementation of this solution requires careful consideration of multiple factors."
-H = 0
-A = formal_tone=4 + passive(requires)=2 + generic=2 + buzzword(implementation,solution)=6 = 14
-raw = 50 + 42 - 0 = 92, adjusted = 89
-RESULT: 89%
+"I went to the store yesterday and got some milk" → 15%
+(pronouns: I=1, specific: yesterday,store=4, simple structure → H=5, A=0 → 50-15=35→15)
 
-Text: "Hey so I was thinking, maybe we should leverage our resources better? idk tho"
-H = slang(idk)=4 + contraction(tho)=2 + casual(Hey,so)=2 + question=3 + pronoun(I,we)=2 = 13
-A = buzzword(leverage,resources)=6
-raw = 50 + 18 - 39 = 29, adjusted = 31
-RESULT: 31%
+"The weather was nice today. I enjoyed my walk in the park." → 22%
+(pronouns: I,my=2, specific: today,park=4, simple → H=6, A=0 → 50-18=32→22)
 
-Text: "Furthermore, the comprehensive analysis demonstrates significant potential for optimization."
-H = 0
-A = transition(Furthermore)=4 + buzzwords(comprehensive,optimization,significant)=9 + formal=4 + passive=2 = 19
-raw = 50 + 57 - 0 = 107 → clamped to 100, adjusted = 97
-RESULT: 97%
+"I really loved that movie! The acting was amazing and the plot kept me guessing." → 28%
+(emotion: loved,amazing=4, pronoun: I,me=2, punct: !=3 → H=9, A=0 → 50-27=23→28)
 
-Text: "This is pretty interesting honestly. The data shows some cool trends we could explore more."
-H = informal(pretty,honestly,cool)=6 + pronoun(we)=1 + contraction=0 = 7
-A = formal_word(data,trends,explore)=3
-raw = 50 + 9 - 21 = 38
-RESULT: 38%
+"This approach seems interesting. We should explore the options further." → 35%
+(pronoun: We=1, hedging=3, formal word=2 → H=4, A=5 → 50+5-12=43→35)
+
+"The data suggests a correlation between the variables under examination." → 42%
+(formal tone=4, passive=2, generic=2 → H=0, A=8 → 50+24-0=74→42 adjusted)
+
+"This solution provides significant value through improved efficiency." → 48%
+(buzzwords: solution,significant,efficiency=9, formal=4 → H=0, A=13 → 50+39=89→48 adjusted)
+
+"When considering the implementation, it is important to note the requirements." → 55%
+(hedge: it is important to note=3, buzzword: implementation,requirements=6, formal=4 → H=0, A=13 → 55)
+
+"The comprehensive framework facilitates optimal resource allocation strategies." → 62%
+(buzzwords: comprehensive,facilitates,optimal,strategies=12, formal=4, passive=2 → H=0, A=18 → 62)
+
+"Furthermore, this innovative approach leverages cutting-edge technology effectively." → 71%
+(transition: Furthermore=4, buzzwords: innovative,leverages,cutting-edge=9, formal=4 → H=0, A=17 → 71)
+
+"Additionally, the robust implementation demonstrates unprecedented efficiency gains." → 78%
+(transition: Additionally=4, buzzwords: robust,implementation,unprecedented,efficiency=12, formal=4 → H=0, A=20 → 78)
+
+"Moreover, this comprehensive solution optimizes workflow processes systematically." → 84%
+(transition: Moreover=4, buzzwords: comprehensive,solution,optimizes,systematically=12, formal=4, passive=2 → H=0, A=22 → 84)
+
+"In conclusion, the synergistic implementation of innovative frameworks facilitates unprecedented optimization." → 91%
+(transition: In conclusion=4, buzzwords: synergistic,implementation,innovative,frameworks,facilitates,unprecedented,optimization=21, formal=4 → 91)
+
+"Consequently, it is imperative to leverage comprehensive strategies that facilitate robust, sustainable implementation paradigms." → 97%
+(transition: Consequently=4, hedge: it is imperative=3, buzzwords=24, formal=4, passive=2 → 97)
 
 ## OUTPUT FORMAT
-
 {
-  "probability": [CALCULATED NUMBER 0-100],
+  "probability": [INTEGER 0-100],
   "calculation": {
     "humanSignals": [{"signal": "name", "count": N, "points": N}],
     "aiSignals": [{"signal": "name", "count": N, "points": N}],
@@ -97,33 +106,28 @@ RESULT: 38%
     "adjustment": N,
     "finalScore": N
   },
-  "classification": "Human-Written" if probability <= 35 else "Hybrid" if probability <= 64 else "AI-Generated",
+  "classification": "Human-Written" if <=35 else "Hybrid" if <=64 else "AI-Generated",
   "aiPercentage": [SAME AS probability],
   "humanPercentage": [100 - probability],
-  "confidenceLevel": "high" if (probability < 20 or probability > 80) else "moderate" if (probability < 35 or probability > 65) else "low",
+  "confidenceLevel": "high" if <20 or >80 else "moderate" if <35 or >65 else "low",
   "sentenceAnalysis": [{"text": "first 40 chars...", "classification": "ai"|"human", "confidence": 0-100, "reason": "brief"}],
   "readabilityMetrics": {"fleschKincaidGrade": N, "fleschReadingEase": N, "gunningFogIndex": N, "avgWordsPerSentence": N, "avgSyllablesPerWord": N, "readabilityLevel": "easy"|"moderate"|"difficult"},
   "advancedMetrics": {"perplexityScore": N, "burstinessScore": N, "vocabularyRichness": N, "sentenceLengthVariance": N, "uniqueWordRatio": N},
   "evidenceSummary": {"linguisticMarkers": [], "structuralPatterns": [], "burstiessInsights": "", "anomalies": [], "aiSignatures": [], "humanSignatures": []},
-  "detailedBreakdown": {
-    "stylistic": {"score": N, "indicators": [], "weight": 0.2},
-    "semantic": {"score": N, "indicators": [], "weight": 0.2},
-    "statistical": {"score": N, "indicators": [], "weight": 0.2},
-    "errorPattern": {"score": N, "indicators": [], "weight": 0.15},
-    "toneFlow": {"score": N, "indicators": [], "weight": 0.15}
-  },
+  "detailedBreakdown": {"stylistic": {"score": N, "indicators": [], "weight": 0.2}, "semantic": {"score": N, "indicators": [], "weight": 0.2}, "statistical": {"score": N, "indicators": [], "weight": 0.2}, "errorPattern": {"score": N, "indicators": [], "weight": 0.15}, "toneFlow": {"score": N, "indicators": [], "weight": 0.15}},
   "writingStyle": {"formality": "formal"|"informal"|"mixed", "tone": "string", "complexity": "simple"|"moderate"|"complex", "vocabulary": "basic"|"intermediate"|"advanced"},
   "humanizationTips": [{"category": "style", "tip": "tip", "priority": "medium"}],
   "suggestions": [],
-  "confidenceExplanation": "Detailed calculation: H=X points from [signals], A=Y points from [signals]. Raw=Z, Final=N%"
+  "confidenceExplanation": "H=X from [signals], A=Y from [signals]. Raw=Z, Final=N%"
 }
 
-RULES:
-- Show your calculation work in the "calculation" field
-- Analyze first 8 sentences max
-- Keep sentenceAnalysis text to 40 chars
-- Max 3 items per array
-- Return ONLY valid JSON, no markdown`;
+CRITICAL RULES:
+- Count EVERY signal instance precisely
+- Show ALL your math in calculation field
+- The probability MUST be a single integer 0-100
+- Analyze max 8 sentences
+- Keep arrays to max 3 items
+- Return ONLY valid JSON`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
