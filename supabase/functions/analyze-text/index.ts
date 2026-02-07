@@ -6,71 +6,124 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const systemPrompt = `You are an elite AI content detector. Return JSON only.
+const systemPrompt = `You are an AI content detector. Return ONLY valid JSON.
 
-CRITICAL: EVERY NUMBER FROM 0-100 IS VALID
-You can return: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100
+## PROBABILITY CALCULATION - CRITICAL
 
-NEVER DEFAULT TO COMMON VALUES. Pick the EXACT number that matches your analysis.
+You MUST calculate an EXACT probability from 0 to 100 using this precise formula:
 
-CLASSIFICATION RULES:
-- Human-Written: probability 0-35%
-- Hybrid: probability 36-64% (can be 36, 37, 38, 39, 40, 41, 42, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64 - NOT just 43 or 50!)
-- AI-Generated: probability 65-100%
+### Step 1: Count Human Signals (H)
+- Typos/misspellings: +3 each
+- Slang (lol, ngl, fr, idk, gonna, wanna, kinda): +4 each
+- Contractions (don't, can't, won't, I'm, we're): +2 each
+- Incomplete/fragment sentences: +3 each
+- Strong emotion words (love, hate, amazing, awful): +2 each
+- Personal pronouns (I, my, me, we, our): +1 each
+- Specific names/places/dates: +2 each
+- Rhetorical questions: +3 each
+- Casual punctuation (!!, ..., ??, lmao): +3 each
+- Humor/sarcasm/irony: +4 each
+- Stream of consciousness: +3 each
+- Self-corrections ("I mean", "wait no"): +4 each
 
-SIGNAL COUNTING:
-Human signals: typos, slang (lol, ngl, fr, idk), contractions (don't, can't), incomplete sentences, emotional words, personal pronouns (I, my, we), specific names/details, humor, rhetorical questions, casual punctuation (!!, ..., ??)
-AI signals: perfect grammar, formal transitions (Furthermore, Additionally, In conclusion, Moreover), generic statements, balanced sentence structure, buzzwords (innovative, comprehensive, leverage, optimize), passive voice, no contractions, academic tone
+### Step 2: Count AI Signals (A)
+- Formal transitions (Furthermore, Additionally, Moreover, In conclusion, Consequently): +4 each
+- Perfect grammar throughout: +5
+- No contractions at all: +3
+- Passive voice sentences: +2 each
+- Buzzwords (innovative, comprehensive, leverage, optimize, synergy, unprecedented): +3 each
+- Generic statements without specifics: +2 each
+- Balanced parallel sentence structures: +3 each
+- Academic/formal tone: +4
+- Lists with consistent formatting: +2 each
+- Hedging phrases (It is important to note, One might argue): +3 each
 
-SCORING FORMULA - pick EXACT number:
-- 9+ human signals, 0 AI = 0-5%
-- 7-8 human, 1 AI = 6-15%
-- 6 human, 2 AI = 16-25%
-- 5 human, 3 AI = 26-35%
-- 4 human, 4 AI = 36-50% (TRUE HYBRID - pick 36, 38, 41, 44, 47, 49, etc.)
-- 3 human, 5 AI = 51-64% (LEANING AI HYBRID - pick 51, 54, 57, 59, 62, etc.)
-- 2 human, 6 AI = 65-75%
-- 1 human, 7+ AI = 76-89%
-- 0 human, 8+ AI = 90-100%
+### Step 3: Calculate Raw Probability
+raw_probability = 50 + (A * 3) - (H * 3)
 
-HYBRID EXAMPLES (36-64% range):
-- "The meeting went okay I guess, we discussed the quarterly objectives." = 42%
-- "I really think this solution could work, though implementation requires careful planning." = 51%
-- "Hey team, please review the comprehensive documentation attached." = 47%
-- "Not gonna lie, the data analysis shows significant trends." = 39%
-- "We should probably optimize our workflow going forward lol" = 44%
-- "The results are promising but idk if we have enough resources." = 38%
-- "Furthermore, I personally believe we need more coffee breaks." = 56%
-- "This is pretty cool honestly, demonstrates unprecedented potential." = 53%
+### Step 4: Apply Bounds and Precision
+- Clamp to 0-100 range
+- Add micro-adjustment based on text length: +/- (word_count % 7) - 3
+- The final number should be PRECISE, not rounded
+
+### EXAMPLE CALCULATIONS:
+
+Text: "omg i cant believe this lol!! sarah told me yesterday and im like wtf??"
+H = slang(lol,wtf)=8 + typo(cant,im)=6 + punctuation(!!)=3 + emotion=2 + pronouns(i,me,im)=3 = 22
+A = 0
+raw = 50 + 0 - 66 = -16 → clamped to 0, adjusted = 3
+RESULT: 3%
+
+Text: "I went to the store yesterday. Got some milk and bread. Pretty normal day tbh."
+H = contraction(tbh)=2 + pronouns(I)=2 + specific(yesterday,store)=4 + fragment=3 = 11
+A = 0
+raw = 50 + 0 - 33 = 17, adjusted = 19
+RESULT: 19%
+
+Text: "The implementation of this solution requires careful consideration of multiple factors."
+H = 0
+A = formal_tone=4 + passive(requires)=2 + generic=2 + buzzword(implementation,solution)=6 = 14
+raw = 50 + 42 - 0 = 92, adjusted = 89
+RESULT: 89%
+
+Text: "Hey so I was thinking, maybe we should leverage our resources better? idk tho"
+H = slang(idk)=4 + contraction(tho)=2 + casual(Hey,so)=2 + question=3 + pronoun(I,we)=2 = 13
+A = buzzword(leverage,resources)=6
+raw = 50 + 18 - 39 = 29, adjusted = 31
+RESULT: 31%
+
+Text: "Furthermore, the comprehensive analysis demonstrates significant potential for optimization."
+H = 0
+A = transition(Furthermore)=4 + buzzwords(comprehensive,optimization,significant)=9 + formal=4 + passive=2 = 19
+raw = 50 + 57 - 0 = 107 → clamped to 100, adjusted = 97
+RESULT: 97%
+
+Text: "This is pretty interesting honestly. The data shows some cool trends we could explore more."
+H = informal(pretty,honestly,cool)=6 + pronoun(we)=1 + contraction=0 = 7
+A = formal_word(data,trends,explore)=3
+raw = 50 + 9 - 21 = 38
+RESULT: 38%
+
+## OUTPUT FORMAT
 
 {
-  "classification": "AI-Generated" | "Human-Written" | "Hybrid",
-  "probability": [EXACT NUMBER 0-100 based on signal count],
-  "aiPercentage": [SAME AS PROBABILITY],
-  "humanPercentage": [100 MINUS PROBABILITY],
-  "confidenceLevel": "high" | "moderate" | "low",
-  "sentenceAnalysis": [{"text": "first 50 chars...", "classification": "ai"|"human", "confidence": 0-100, "reason": "brief", "signals": ["signal"]}],
-  "readabilityMetrics": {"fleschKincaidGrade": 8, "fleschReadingEase": 60, "gunningFogIndex": 10, "avgWordsPerSentence": 15, "avgSyllablesPerWord": 1.5, "readabilityLevel": "moderate"},
-  "advancedMetrics": {"perplexityScore": 50, "burstinessScore": 50, "vocabularyRichness": 50, "sentenceLengthVariance": 50, "uniqueWordRatio": 0.5},
+  "probability": [CALCULATED NUMBER 0-100],
+  "calculation": {
+    "humanSignals": [{"signal": "name", "count": N, "points": N}],
+    "aiSignals": [{"signal": "name", "count": N, "points": N}],
+    "totalH": N,
+    "totalA": N,
+    "rawScore": N,
+    "adjustment": N,
+    "finalScore": N
+  },
+  "classification": "Human-Written" if probability <= 35 else "Hybrid" if probability <= 64 else "AI-Generated",
+  "aiPercentage": [SAME AS probability],
+  "humanPercentage": [100 - probability],
+  "confidenceLevel": "high" if (probability < 20 or probability > 80) else "moderate" if (probability < 35 or probability > 65) else "low",
+  "sentenceAnalysis": [{"text": "first 40 chars...", "classification": "ai"|"human", "confidence": 0-100, "reason": "brief"}],
+  "readabilityMetrics": {"fleschKincaidGrade": N, "fleschReadingEase": N, "gunningFogIndex": N, "avgWordsPerSentence": N, "avgSyllablesPerWord": N, "readabilityLevel": "easy"|"moderate"|"difficult"},
+  "advancedMetrics": {"perplexityScore": N, "burstinessScore": N, "vocabularyRichness": N, "sentenceLengthVariance": N, "uniqueWordRatio": N},
   "evidenceSummary": {"linguisticMarkers": [], "structuralPatterns": [], "burstiessInsights": "", "anomalies": [], "aiSignatures": [], "humanSignatures": []},
   "detailedBreakdown": {
-    "stylistic": {"score": 50, "indicators": [], "weight": 0.2},
-    "semantic": {"score": 50, "indicators": [], "weight": 0.2},
-    "statistical": {"score": 50, "indicators": [], "weight": 0.2},
-    "errorPattern": {"score": 50, "indicators": [], "weight": 0.15},
-    "toneFlow": {"score": 50, "indicators": [], "weight": 0.15}
+    "stylistic": {"score": N, "indicators": [], "weight": 0.2},
+    "semantic": {"score": N, "indicators": [], "weight": 0.2},
+    "statistical": {"score": N, "indicators": [], "weight": 0.2},
+    "errorPattern": {"score": N, "indicators": [], "weight": 0.15},
+    "toneFlow": {"score": N, "indicators": [], "weight": 0.15}
   },
-  "writingStyle": {"formality": "formal", "tone": "neutral", "complexity": "moderate", "vocabulary": "intermediate"},
+  "writingStyle": {"formality": "formal"|"informal"|"mixed", "tone": "string", "complexity": "simple"|"moderate"|"complex", "vocabulary": "basic"|"intermediate"|"advanced"},
   "humanizationTips": [{"category": "style", "tip": "tip", "priority": "medium"}],
   "suggestions": [],
-  "confidenceExplanation": "Found X human signals and Y AI signals = Z%"
+  "confidenceExplanation": "Detailed calculation: H=X points from [signals], A=Y points from [signals]. Raw=Z, Final=N%"
 }
 
 RULES:
+- Show your calculation work in the "calculation" field
 - Analyze first 8 sentences max
-- Keep sentenceAnalysis text to 50 chars max
+- Keep sentenceAnalysis text to 40 chars
 - Max 3 items per array
-- Return ONLY valid JSON`;
+- Return ONLY valid JSON, no markdown`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -96,7 +149,6 @@ serve(async (req) => {
       );
     }
 
-    // Limit text more aggressively
     const truncatedText = text.length > 4000 ? text.substring(0, 4000) : text;
     const wordCount = truncatedText.split(/\s+/).length;
 
@@ -112,10 +164,10 @@ serve(async (req) => {
         model: 'google/gemini-3-flash-preview',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Analyze this text (${wordCount} words). Pick a UNIQUE probability from 0-100 based on signals. Return ONLY valid JSON:\n\n${truncatedText}` }
+          { role: 'user', content: `Analyze this text (${wordCount} words). Follow the EXACT calculation formula. Show your work. The probability can be ANY integer from 0 to 100.\n\nTEXT TO ANALYZE:\n${truncatedText}` }
         ],
         max_tokens: 4000,
-        temperature: 0.7
+        temperature: 0.8
       }),
     });
 
@@ -149,10 +201,8 @@ serve(async (req) => {
 
     let analysisResult;
     try {
-      // Clean up content - remove markdown, find JSON
       let jsonContent = content.trim();
       
-      // Remove markdown code blocks
       if (jsonContent.includes('```json')) {
         jsonContent = jsonContent.split('```json')[1].split('```')[0];
       } else if (jsonContent.includes('```')) {
@@ -161,7 +211,6 @@ serve(async (req) => {
       
       jsonContent = jsonContent.trim();
       
-      // Try to find the JSON object boundaries
       const startIdx = jsonContent.indexOf('{');
       const endIdx = jsonContent.lastIndexOf('}');
       
@@ -170,26 +219,43 @@ serve(async (req) => {
       }
       
       analysisResult = JSON.parse(jsonContent);
+      
+      // Validate and ensure probability is an integer 0-100
+      if (typeof analysisResult.probability === 'number') {
+        analysisResult.probability = Math.max(0, Math.min(100, Math.round(analysisResult.probability)));
+      }
+      
     } catch (parseError) {
       console.error('JSON parse error:', parseError);
-      console.error('Content length:', content.length);
-      
-      // Return a fallback result instead of error
       analysisResult = {
         classification: "Hybrid",
         probability: 50,
         confidenceLevel: "low",
-        confidenceExplanation: "Analysis could not be fully completed. Please try with shorter text."
+        confidenceExplanation: "Analysis could not be fully completed."
       };
     }
 
-    // Build result with defaults
+    // Ensure probability is valid integer
+    const probability = typeof analysisResult.probability === 'number' 
+      ? Math.max(0, Math.min(100, Math.round(analysisResult.probability)))
+      : 50;
+
+    // Determine classification based on probability
+    let classification: string;
+    if (probability <= 35) {
+      classification = 'Human-Written';
+    } else if (probability <= 64) {
+      classification = 'Hybrid';
+    } else {
+      classification = 'AI-Generated';
+    }
+
     const result = {
-      classification: analysisResult.classification || 'Hybrid',
-      probability: analysisResult.probability ?? 50,
-      aiPercentage: analysisResult.aiPercentage ?? analysisResult.probability ?? 50,
-      humanPercentage: analysisResult.humanPercentage ?? (100 - (analysisResult.probability ?? 50)),
-      confidenceLevel: analysisResult.confidenceLevel || 'moderate',
+      classification,
+      probability,
+      aiPercentage: probability,
+      humanPercentage: 100 - probability,
+      confidenceLevel: analysisResult.confidenceLevel || (probability < 20 || probability > 80 ? 'high' : probability < 35 || probability > 65 ? 'moderate' : 'low'),
       sentenceAnalysis: (analysisResult.sentenceAnalysis || []).slice(0, 8),
       readabilityMetrics: analysisResult.readabilityMetrics || {
         fleschKincaidGrade: 8, fleschReadingEase: 60, gunningFogIndex: 10,
@@ -219,10 +285,11 @@ serve(async (req) => {
       },
       humanizationTips: (analysisResult.humanizationTips || []).slice(0, 3),
       suggestions: (analysisResult.suggestions || []).slice(0, 3),
-      confidenceExplanation: analysisResult.confidenceExplanation || 'Analysis completed.'
+      confidenceExplanation: analysisResult.confidenceExplanation || `Calculated probability: ${probability}%`,
+      calculation: analysisResult.calculation || null
     };
 
-    console.log('Analysis complete:', result.classification, 'Confidence:', result.confidenceLevel);
+    console.log('Analysis complete:', result.classification, 'Probability:', result.probability, 'Confidence:', result.confidenceLevel);
 
     return new Response(
       JSON.stringify(result),
