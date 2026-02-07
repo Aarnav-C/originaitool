@@ -105,10 +105,10 @@ serve(async (req) => {
         model: 'google/gemini-3-flash-preview',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Analyze this text (${wordCount} words). Return ONLY valid JSON:\n\n${truncatedText}` }
+          { role: 'user', content: `Analyze this text (${wordCount} words). Pick a UNIQUE probability from 0-100 based on signals. Return ONLY valid JSON:\n\n${truncatedText}` }
         ],
-        max_tokens: 2000,
-        temperature: 0.3
+        max_tokens: 4000,
+        temperature: 0.7
       }),
     });
 
